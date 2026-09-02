@@ -48,6 +48,7 @@
     "asar": true,
     "files": [
       "index.html",
+      "content-banks.js",
       "assets/**/*",
       "electron/**/*",
       "package.json"

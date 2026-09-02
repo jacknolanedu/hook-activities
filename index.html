@@ -1066,6 +1066,7 @@
     </section>
   </div>
 
+  <script src="./content-banks.js"></script>
   <script>
     /* ─────────────────────────────────────────────
        MATH CONNECTIONS — PROCEDURAL GENERATORS
@@ -1093,8 +1094,9 @@
        CONTENT BANK ENGINE — Anti-Repetition & Sub-Sampling
     ───────────────────────────────────────────── */
     const CONTENT_BANK_STORAGE_KEY = 'classroomStartersContentBank';
-    const BANK_MIN_UNIQUE_BEFORE_REUSE = 15;
-    const BANK_RECENT_GAMES_TO_TRACK = 3;
+    const BANK_MIN_UNIQUE_BEFORE_REUSE = 25;
+    const BANK_RECENT_GAMES_TO_TRACK = 10;
+    const BANK_MAX_SIGNATURES = 60;
 
     function loadContentBankState() {
       try {
@@ -1113,8 +1115,9 @@
     function getBankRecord(bankId) {
       const all = loadContentBankState();
       if (!all[bankId]) {
-        all[bankId] = { played: [], recentGames: [] };
+        all[bankId] = { played: [], recentGames: [], recentSignatures: [] };
       }
+      if (!all[bankId].recentSignatures) all[bankId].recentSignatures = [];
       return all[bankId];
     }
 
@@ -1123,18 +1126,26 @@
       return new Set(record.recentGames.flat());
     }
 
-    function recordBankSelection(bankId, selectedIds) {
+    function getRecentSignatures(bankId) {
+      const record = getBankRecord(bankId);
+      return new Set(record.recentSignatures || []);
+    }
+
+    function recordBankSelection(bankId, selectedIds, signature = null) {
       const all = loadContentBankState();
       const record = getBankRecord(bankId);
       selectedIds.forEach((id) => {
         if (!record.played.includes(id)) record.played.push(id);
       });
       record.recentGames = [selectedIds, ...record.recentGames].slice(0, BANK_RECENT_GAMES_TO_TRACK);
+      if (signature) {
+        record.recentSignatures = [signature, ...(record.recentSignatures || [])].slice(0, BANK_MAX_SIGNATURES);
+      }
       all[bankId] = record;
       saveContentBankState(all);
     }
 
-    function selectFromContentBank(bankId, pool, count) {
+    function pickEligibleFromPool(bankId, pool, count) {
       const record = getBankRecord(bankId);
       const recentIds = getRecentBankIds(bankId);
       let eligible = [...pool];
@@ -1150,30 +1161,80 @@
       }
       if (eligible.length < count) eligible = [...pool];
 
-      const selected = pickN(eligible, count);
+      return pickN(eligible, count);
+    }
+
+    function selectFromContentBank(bankId, pool, count) {
+      const selected = pickEligibleFromPool(bankId, pool, count);
       recordBankSelection(bankId, selected.map((item) => item.id));
       return selected;
     }
 
-    function sampleCategoryItems(category) {
-      const pool = category.pool || category.items || [];
-      return pickN(pool, 4);
+    function connectionsBoardSignature(categories) {
+      return categories
+        .map((c) => `${c.title}|${[...c.items].map(normalizeItem).sort().join(',')}`)
+        .sort()
+        .join(';;');
+    }
+
+    function sampleCategoryItems(category, avoidItems = new Set()) {
+      const pool = (category.pool || category.items || []).filter(
+        (item) => !avoidItems.has(normalizeItem(item))
+      );
+      const source = pool.length >= 4 ? pool : (category.pool || category.items || []);
+      return pickN(source, 4);
     }
 
     function createBankConnectionsGame(bankId, pool) {
-      const picked = selectFromContentBank(bankId, pool, 4);
-      const categories = picked.map((cat, i) => ({
-        id: `${cat.id}-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 5)}`,
+      const recentSigs = getRecentSignatures(bankId);
+
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const picked = pickEligibleFromPool(bankId, pool, 4);
+        const categories = picked.map((cat, i) => ({
+          id: `${cat.id}-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 5)}`,
+          title: cat.title,
+          difficulty: cat.difficulty || ['easy', 'medium', 'hard', 'tricky'][i],
+          items: sampleCategoryItems(cat),
+        }));
+        const sig = connectionsBoardSignature(categories);
+        if (!recentSigs.has(sig)) {
+          recordBankSelection(bankId, picked.map((c) => c.id), sig);
+          const { tiles } = buildConnectionPuzzle(categories);
+          return { activeCategories: categories, tiles };
+        }
+      }
+
+      const fallback = pickEligibleFromPool(bankId, pool, 4);
+      const categories = fallback.map((cat, i) => ({
+        id: `${cat.id}-fb-${i}`,
         title: cat.title,
         difficulty: cat.difficulty || ['easy', 'medium', 'hard', 'tricky'][i],
         items: sampleCategoryItems(cat),
       }));
+      recordBankSelection(bankId, fallback.map((c) => c.id), connectionsBoardSignature(categories));
       const { tiles } = buildConnectionPuzzle(categories);
       return { activeCategories: categories, tiles };
     }
 
     function selectSingleFromBank(bankId, pool) {
       return selectFromContentBank(bankId, pool, 1)[0];
+    }
+
+    function selectUniqueRound(bankId, pool, buildRound) {
+      const recentSigs = getRecentSignatures(bankId);
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const item = pickEligibleFromPool(bankId, pool, 1)[0];
+        const round = buildRound(item);
+        const sig = round.signature || item.id;
+        if (!recentSigs.has(sig)) {
+          recordBankSelection(bankId, [item.id], sig);
+          return round;
+        }
+      }
+      const item = pickEligibleFromPool(bankId, pool, 1)[0];
+      const round = buildRound(item);
+      recordBankSelection(bankId, [item.id], round.signature || item.id);
+      return round;
     }
 
     function uniquePush(set, value, list) {
@@ -1858,15 +1919,68 @@
         { text: 'If x = 5, then 2x + 3 = 13', isTrue: true, explain: '2(5) + 3 = 10 + 3 = 13.' },
         { text: 'If x = 5, then 2x + 3 = 15', isTrue: false, explain: '2(5) + 3 = 13, not 15.' },
         { text: '0.75 is equivalent to 3/4', isTrue: true, explain: '3 ÷ 4 = 0.75.' },
-        { text: '0.75 is equivalent to 2/3', isTrue: false, explain: '2/3 ≈ 0.667, not 0.75.' }
+        { text: '0.75 is equivalent to 2/3', isTrue: false, explain: '2/3 ≈ 0.667, not 0.75.' },
+        { text: 'The sum of angles in a quadrilateral is 360°', isTrue: true, explain: 'Any quadrilateral has interior angles totalling 360°.' },
+        { text: 'The sum of angles in a quadrilateral is 180°', isTrue: false, explain: '180° is for triangles; quadrilaterals sum to 360°.' },
+        { text: '0.25 is the same as 1/4', isTrue: true, explain: '1 ÷ 4 = 0.25.' },
+        { text: '0.25 is the same as 1/3', isTrue: false, explain: '1/3 ≈ 0.333, not 0.25.' },
+        { text: '10% of 200 is 20', isTrue: true, explain: '10% = 0.1, and 0.1 × 200 = 20.' },
+        { text: '10% of 200 is 2', isTrue: false, explain: '10% of 200 is 20, not 2.' },
+        { text: 'A hexagon has 6 sides', isTrue: true, explain: 'Hexa- means six; a hexagon has six sides.' },
+        { text: 'A hexagon has 8 sides', isTrue: false, explain: 'A hexagon has 6 sides; 8 sides make an octagon.' },
+        { text: 'The perimeter of a 5 cm square is 20 cm', isTrue: true, explain: '4 × 5 cm = 20 cm.' },
+        { text: 'The perimeter of a 5 cm square is 25 cm', isTrue: false, explain: 'Perimeter = 4 × side = 4 × 5 = 20 cm.' },
+        { text: '√16 equals 4', isTrue: true, explain: '4 × 4 = 16, so √16 = 4.' },
+        { text: '√16 equals 8', isTrue: false, explain: '√16 = 4 because 4² = 16.' },
+        { text: '5! (5 factorial) equals 120', isTrue: true, explain: '5! = 5 × 4 × 3 × 2 × 1 = 120.' },
+        { text: '5! (5 factorial) equals 25', isTrue: false, explain: '5! = 120, not 25.' },
+        { text: 'The median of 2, 4, 6, 8, 10 is 6', isTrue: true, explain: 'The middle value in an ordered list of five numbers is 6.' },
+        { text: 'The median of 2, 4, 6, 8, 10 is 8', isTrue: false, explain: 'The median is the middle value: 6.' },
+        { text: 'Parallel lines never meet', isTrue: true, explain: 'In Euclidean geometry, parallel lines in a plane never intersect.' },
+        { text: 'Parallel lines always meet at right angles', isTrue: false, explain: 'Parallel lines never meet; perpendicular lines meet at 90°.' },
+        { text: '3/5 is greater than 1/2', isTrue: true, explain: '3/5 = 0.6 and 1/2 = 0.5, so 3/5 is larger.' },
+        { text: '3/5 is less than 1/2', isTrue: false, explain: '3/5 = 0.6, which is greater than 0.5.' },
+        { text: 'A circle has infinite lines of symmetry', isTrue: true, explain: 'Any diameter of a circle is a line of symmetry.' },
+        { text: 'A circle has exactly 4 lines of symmetry', isTrue: false, explain: 'A circle has infinitely many lines of symmetry.' }
       );
       return pool;
     }
 
     function generateTruthsLieRound() {
       const pool = buildMathFactPool();
-      const truths = pool.filter(f => f.isTrue);
-      const lies = pool.filter(f => !f.isTrue);
+      const truths = pool.filter((f) => f.isTrue);
+      const lies = pool.filter((f) => !f.isTrue);
+      const recentSigs = getRecentSignatures('truths-lie');
+
+      for (let attempt = 0; attempt < 50; attempt++) {
+        let t1, t2, lie;
+        let guard = 0;
+        do {
+          t1 = truths[randInt(0, truths.length - 1)];
+          t2 = truths[randInt(0, truths.length - 1)];
+          lie = lies[randInt(0, lies.length - 1)];
+          guard++;
+        } while ((t1.text === t2.text || t1.text === lie.text || t2.text === lie.text) && guard < 50);
+
+        const shuffled = shuffle([t1, t2, lie]);
+        const sig = shuffled.map((f) => f.text).sort().join(';;');
+        if (!recentSigs.has(sig)) {
+          recordBankSelection('truths-lie', [sig], sig);
+          const statements = shuffled.map((f, i) => ({
+            letter: String.fromCharCode(65 + i),
+            text: f.text,
+            isLie: !f.isTrue,
+          }));
+          const lieStmt = statements.find((s) => s.isLie);
+          return {
+            statements,
+            lieLetter: lieStmt.letter,
+            lieText: lieStmt.text,
+            explanation: shuffled.find((f) => !f.isTrue).explain,
+          };
+        }
+      }
+
       let t1, t2, lie;
       let guard = 0;
       do {
@@ -1882,12 +1996,12 @@
         text: f.text,
         isLie: !f.isTrue,
       }));
-      const lieStmt = statements.find(s => s.isLie);
+      const lieStmt = statements.find((s) => s.isLie);
       return {
         statements,
         lieLetter: lieStmt.letter,
         lieText: lieStmt.text,
-        explanation: shuffled.find(f => !f.isTrue).explain,
+        explanation: lie.explain,
       };
     }
 
@@ -1895,25 +2009,42 @@
        FUNCTION MACHINE GENERATOR
     ───────────────────────────────────────────── */
     function generateFunctionMachine() {
-      const a = randInt(2, 6);
-      const b = randInt(1, 12);
-      const subtract = Math.random() < 0.5;
-      const ruleText = subtract
-        ? `Multiply by ${a}, then subtract ${b}`
-        : `Multiply by ${a}, then add ${b}`;
-      const apply = (x) => (subtract ? x * a - b : x * a + b);
-      const inputPool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15];
-      const inputs = pickN(inputPool, 3);
-      const table = inputs.map(input => ({ input, output: apply(input) }));
-      const wrongRules = shuffle([
-        `Multiply by ${a + 1}, then add ${b}`,
-        `Add ${b}, then multiply by ${a}`,
-        `Multiply by ${a}`,
-        `Square the input, then add ${b}`,
-        `Multiply by ${a - 1}, then add ${b}`,
-        `Subtract ${b}, then multiply by ${a}`,
-      ].filter(r => r !== ruleText)).slice(0, 3);
-      const choices = shuffle([ruleText, ...wrongRules]);
+      const recentSigs = getRecentSignatures('function-machine');
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const a = randInt(2, 6);
+        const b = randInt(1, 12);
+        const subtract = Math.random() < 0.5;
+        const sig = `a${a}-b${b}-${subtract ? 'sub' : 'add'}`;
+        if (recentSigs.has(sig)) continue;
+
+        const ruleText = subtract
+          ? `Multiply by ${a}, then subtract ${b}`
+          : `Multiply by ${a}, then add ${b}`;
+        const apply = (x) => (subtract ? x * a - b : x * a + b);
+        const inputPool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15];
+        const inputs = pickN(inputPool, 3);
+        const table = inputs.map((input) => ({ input, output: apply(input) }));
+        const wrongRules = shuffle([
+          `Multiply by ${a + 1}, then add ${b}`,
+          `Add ${b}, then multiply by ${a}`,
+          `Multiply by ${a}`,
+          `Square the input, then add ${b}`,
+          `Multiply by ${a - 1}, then add ${b}`,
+          `Subtract ${b}, then multiply by ${a}`,
+        ].filter((r) => r !== ruleText)).slice(0, 3);
+        const choices = shuffle([ruleText, ...wrongRules]);
+        recordBankSelection('function-machine', [sig], sig);
+        return { ruleText, table, choices, multiplier: a, offset: b, subtract };
+      }
+
+      const a = 3;
+      const b = 5;
+      const subtract = false;
+      const ruleText = `Multiply by ${a}, then add ${b}`;
+      const apply = (x) => x * a + b;
+      const inputs = [2, 4, 6];
+      const table = inputs.map((input) => ({ input, output: apply(input) }));
+      const choices = shuffle([ruleText, `Multiply by ${a}`, `Add ${b}, then multiply by ${a}`, `Square the input, then add ${b}`]);
       return { ruleText, table, choices, multiplier: a, offset: b, subtract };
     }
 
@@ -1925,9 +2056,11 @@
     }
 
     function generateMysteryNumber() {
+      const recentSigs = getRecentSignatures('mystery-number');
       for (let attempt = 0; attempt < 80; attempt++) {
         const secret = randInt(10, 99);
-        const mult = [3, 4, 5, 6, 7, 8, 9].filter(m => secret % m === 0);
+        if (recentSigs.has(String(secret))) continue;
+        const mult = [3, 4, 5, 6, 7, 8, 9].filter((m) => secret % m === 0);
         if (!mult.length) continue;
         const divisor = mult[randInt(0, mult.length - 1)];
         const ds = digitSum(secret);
@@ -1944,6 +2077,7 @@
           if (n % divisor === 0 && digitSum(n) === ds && (n % 2 === 0) === isEven) matches.push(n);
         }
         if (matches.length === 1 && matches[0] === secret) {
+          recordBankSelection('mystery-number', [String(secret)], String(secret));
           return { secret, clues };
         }
       }
@@ -2321,69 +2455,100 @@
     }
 
     function generateEstimationChallenge() {
-      const mode = randInt(0, 2);
+      const recentSigs = getRecentSignatures('estimation');
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const mode = randInt(0, 2);
+        let round;
+        let sig;
 
-      if (mode === 0) {
-        const count = randInt(28, 72);
-        const bounds = { x: 198, y: 98, w: 324, h: 248 };
-        const dotPositions = generateNonOverlappingDots(count, bounds);
-        const r5lo = Math.max(0, Math.round(count * 0.95));
-        const r5hi = Math.round(count * 1.05);
-        const r10lo = Math.max(0, Math.round(count * 0.9));
-        const r10hi = Math.round(count * 1.1);
-        return {
-          type: 'dots',
-          question: 'Estimate how many dots are in the jar!',
-          answer: count,
-          answerDisplay: count + ' dots',
-          dotPositions,
-          bars: [],
-          angleDeg: 0,
-          range5: `${r5lo} – ${r5hi}`,
-          range10: `${r10lo} – ${r10hi}`,
-        };
+        if (mode === 0) {
+          const count = randInt(28, 72);
+          sig = `dots-${count}`;
+          if (recentSigs.has(sig)) continue;
+          const bounds = { x: 198, y: 98, w: 324, h: 248 };
+          const dotPositions = generateNonOverlappingDots(count, bounds);
+          const r5lo = Math.max(0, Math.round(count * 0.95));
+          const r5hi = Math.round(count * 1.05);
+          const r10lo = Math.max(0, Math.round(count * 0.9));
+          const r10hi = Math.round(count * 1.1);
+          round = {
+            type: 'dots',
+            question: 'Estimate how many dots are in the jar!',
+            answer: count,
+            answerDisplay: count + ' dots',
+            dotPositions,
+            bars: [],
+            angleDeg: 0,
+            range5: `${r5lo} – ${r5hi}`,
+            range10: `${r10lo} – ${r10hi}`,
+          };
+        } else if (mode === 1) {
+          const pct = randInt(25, 82);
+          sig = `bar-${pct}`;
+          if (recentSigs.has(sig)) continue;
+          const bars = [
+            { label: 'A', height: randInt(30, 70) },
+            { label: 'B', height: pct },
+            { label: 'C', height: randInt(40, 90) },
+            { label: 'D', height: randInt(20, 60) },
+          ];
+          const r5lo = Math.max(0, pct - 5);
+          const r5hi = Math.min(100, pct + 5);
+          const r10lo = Math.max(0, pct - 10);
+          const r10hi = Math.min(100, pct + 10);
+          round = {
+            type: 'bar',
+            question: 'Look at bar B — estimate what percentage it is filled!',
+            answer: pct,
+            answerDisplay: pct + '%',
+            dotPositions: [],
+            bars,
+            angleDeg: 0,
+            range5: `${r5lo}% – ${r5hi}%`,
+            range10: `${r10lo}% – ${r10hi}%`,
+          };
+        } else {
+          const angleDeg = randInt(15, 165);
+          sig = `angle-${angleDeg}`;
+          if (recentSigs.has(sig)) continue;
+          const r5lo = Math.max(0, angleDeg - 5);
+          const r5hi = Math.min(180, angleDeg + 5);
+          const r10lo = Math.max(0, angleDeg - 10);
+          const r10hi = Math.min(180, angleDeg + 10);
+          round = {
+            type: 'angle',
+            question: 'Estimate the angle shown by the arc (in degrees)!',
+            answer: angleDeg,
+            answerDisplay: angleDeg + '°',
+            dotPositions: [],
+            bars: [],
+            angleDeg,
+            range5: `${r5lo}° – ${r5hi}°`,
+            range10: `${r10lo}° – ${r10hi}°`,
+          };
+        }
+
+        recordBankSelection('estimation', [sig], sig);
+        return round;
       }
 
-      if (mode === 1) {
-        const pct = randInt(25, 82);
-        const bars = [
-          { label: 'A', height: randInt(30, 70) },
-          { label: 'B', height: pct },
-          { label: 'C', height: randInt(40, 90) },
-          { label: 'D', height: randInt(20, 60) },
-        ];
-        const r5lo = Math.max(0, pct - 5);
-        const r5hi = Math.min(100, pct + 5);
-        const r10lo = Math.max(0, pct - 10);
-        const r10hi = Math.min(100, pct + 10);
-        return {
-          type: 'bar',
-          question: 'Look at bar B — estimate what percentage it is filled!',
-          answer: pct,
-          answerDisplay: pct + '%',
-          dotPositions: [],
-          bars,
-          angleDeg: 0,
-          range5: `${r5lo}% – ${r5hi}%`,
-          range10: `${r10lo}% – ${r10hi}%`,
-        };
-      }
-
-      const angleDeg = randInt(15, 165);
-      const r5lo = Math.max(0, angleDeg - 5);
-      const r5hi = Math.min(180, angleDeg + 5);
-      const r10lo = Math.max(0, angleDeg - 10);
-      const r10hi = Math.min(180, angleDeg + 10);
+      const count = 45;
+      const bounds = { x: 198, y: 98, w: 324, h: 248 };
+      const dotPositions = generateNonOverlappingDots(count, bounds);
+      const r5lo = Math.max(0, Math.round(count * 0.95));
+      const r5hi = Math.round(count * 1.05);
+      const r10lo = Math.max(0, Math.round(count * 0.9));
+      const r10hi = Math.round(count * 1.1);
       return {
-        type: 'angle',
-        question: 'Estimate the angle shown by the arc (in degrees)!',
-        answer: angleDeg,
-        answerDisplay: angleDeg + '°',
-        dotPositions: [],
+        type: 'dots',
+        question: 'Estimate how many dots are in the jar!',
+        answer: count,
+        answerDisplay: count + ' dots',
+        dotPositions,
         bars: [],
-        angleDeg,
-        range5: `${r5lo}° – ${r5hi}°`,
-        range10: `${r10lo}° – ${r10hi}°`,
+        angleDeg: 0,
+        range5: `${r5lo} – ${r5hi}`,
+        range10: `${r10lo} – ${r10hi}`,
       };
     }
 
@@ -2425,6 +2590,15 @@
       { id: 'lit-antonyms', title: 'Antonym pairs', difficulty: 'easy', pool: ['Hot / Cold', 'Light / Dark', 'Brave / Cowardly', 'Ancient / Modern', 'Victory / Defeat', 'Generous / Selfish', 'Expand / Shrink', 'Arrive / Depart'] },
       { id: 'lit-prefix-re', title: "Prefixes: re- = again", difficulty: 'easy', pool: ['Rewrite', 'Rebuild', 'Return', 'Replay', 'Recycle', 'Rethink', 'Replace', 'Refresh'] },
       { id: 'lit-suffix-ology', title: "Suffix: -ology = study of", difficulty: 'hard', pool: ['Geology', 'Biology', 'Psychology', 'Archaeology', 'Meteorology', 'Zoology', 'Anthropology', 'Ecology'] },
+      { id: 'lit-punctuation', title: 'Punctuation marks', difficulty: 'easy', pool: ['Comma', 'Full stop', 'Question mark', 'Exclamation mark', 'Apostrophe', 'Quotation marks', 'Colon', 'Semicolon'] },
+      { id: 'lit-poetic-forms', title: 'Poetic forms & features', difficulty: 'hard', pool: ['Haiku', 'Sonnet', 'Stanza', 'Rhyme scheme', 'Free verse', 'Ballad', 'Couplet', 'Limerick'] },
+      { id: 'lit-tone-words', title: 'Tone & mood words', difficulty: 'medium', pool: ['Joyful', 'Melancholy', 'Suspenseful', 'Humorous', 'Somber', 'Hopeful', 'Ironic', 'Nostalgic'] },
+      { id: 'lit-text-types', title: 'Text types & genres', difficulty: 'easy', pool: ['Narrative', 'Persuasive', 'Information report', 'Recount', 'Procedure', 'Biography', 'Editorial', 'Review'] },
+      { id: 'lit-figurative-verbs', title: 'Vivid verbs (show not tell)', difficulty: 'medium', pool: ['Scurried', 'Lurched', 'Whispered', 'Glared', 'Trudged', 'Gasped', 'Sprinted', 'Muttered'] },
+      { id: 'lit-suffix-tion', title: 'Suffix: -tion / -sion', difficulty: 'medium', pool: ['Creation', 'Discussion', 'Invention', 'Expansion', 'Revision', 'Explosion', 'Decision', 'Confusion'] },
+      { id: 'lit-homographs', title: 'Homographs (same spelling)', difficulty: 'tricky', pool: ['Lead (metal) / Lead (guide)', 'Bass (fish) / Bass (low sound)', 'Tear (rip) / Tear (from eye)', 'Wind (air) / Wind (twist)'] },
+      { id: 'lit-aussie-authors', title: 'Australian authors & texts', difficulty: 'hard', pool: ['Mem Fox', 'Shaun Tan', 'John Marsden', 'Melina Marchetta', 'Tim Winton', 'Kate Grenville', 'Bronwyn Bancroft', 'Anh Do'] },
+      { id: 'lit-reading-strategies', title: 'Reading comprehension strategies', difficulty: 'medium', pool: ['Predicting', 'Questioning', 'Summarising', 'Visualising', 'Connecting', 'Inferring', 'Monitoring', 'Synthesising'] },
     ];
 
     const SCIENCE_CATEGORY_BANK = [
@@ -2458,6 +2632,15 @@
       { id: 'sci-adaptations', title: 'Animal Adaptations', difficulty: 'medium', pool: ['Camouflage', 'Migration', 'Hibernation', 'Echolocation', 'Venom', 'Blubber', 'Webbed Feet', 'Sharp Talons'] },
       { id: 'sci-weather', title: 'Weather Instruments', difficulty: 'easy', pool: ['Barometer', 'Thermometer', 'Anemometer', 'Rain Gauge', 'Hygrometer', 'Weather Vane', 'Ceilometer', 'Hygrograph'] },
       { id: 'sci-moon-phases', title: 'Moon Phases', difficulty: 'easy', pool: ['New Moon', 'Crescent', 'First Quarter', 'Gibbous', 'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent'] },
+      { id: 'sci-climate-zones', title: 'Climate zones', difficulty: 'medium', pool: ['Tropical', 'Arid', 'Temperate', 'Polar', 'Mediterranean', 'Subtropical', 'Alpine', 'Coastal'] },
+      { id: 'sci-particle-model', title: 'Particle model of matter', difficulty: 'hard', pool: ['Solid particles vibrate', 'Liquid particles slide', 'Gas particles spread', 'Expansion on heating', 'Contraction on cooling', 'Diffusion', 'Compression', 'Evaporation'] },
+      { id: 'sci-safety-symbols', title: 'Lab safety symbols', difficulty: 'easy', pool: ['Flammable', 'Corrosive', 'Toxic', 'Electrical hazard', 'Eye protection', 'Heat resistant gloves', 'Biohazard', 'No food or drink'] },
+      { id: 'sci-extinction-threats', title: 'Threats to biodiversity', difficulty: 'medium', pool: ['Habitat loss', 'Pollution', 'Invasive species', 'Overfishing', 'Climate change', 'Deforestation', 'Poaching', 'Urban sprawl'] },
+      { id: 'sci-magnetism', title: 'Magnetism concepts', difficulty: 'medium', pool: ['North pole', 'South pole', 'Attract', 'Repel', 'Magnetic field', 'Compass needle', 'Electromagnet', 'Permanent magnet'] },
+      { id: 'sci-circuit-parts', title: 'Electrical circuit parts', difficulty: 'easy', pool: ['Battery', 'Bulb', 'Switch', 'Wire', 'Motor', 'Resistor', 'LED', 'Buzzer'] },
+      { id: 'sci-weather-events', title: 'Extreme weather events', difficulty: 'medium', pool: ['Cyclone', 'Bushfire', 'Flood', 'Drought', 'Hailstorm', 'Heatwave', 'Thunderstorm', 'Tornado'] },
+      { id: 'sci-nutrient-cycles', title: 'Nutrient cycles', difficulty: 'hard', pool: ['Nitrogen cycle', 'Carbon cycle', 'Water cycle', 'Decomposition', 'Photosynthesis', 'Respiration', 'Fixation', 'Mineral uptake'] },
+      { id: 'sci-scientific-skills', title: 'Scientific investigation skills', difficulty: 'easy', pool: ['Hypothesis', 'Fair test', 'Observation', 'Measurement', 'Recording data', 'Analysing results', 'Conclusion', 'Evaluation'] },
     ];
 
     const TIMELINE_EVENT_BANK = [
@@ -2509,142 +2692,13 @@
       return result;
     }
 
-    const RHETORIC_QUOTES = [
-      { quote: 'The wind whispered through the ancient pines.', device: 'Personification', hint: 'Giving human qualities to non-human things.', definition: 'Personification attributes human actions or feelings to objects or nature.' },
-      { quote: 'Peter Piper picked a peck of pickled peppers.', device: 'Alliteration', hint: 'Repeated starting consonant sounds.', definition: 'Alliteration repeats the same initial consonant sound in nearby words.' },
-      { quote: 'I have told you a million times!', device: 'Hyperbole', hint: 'Extreme exaggeration for effect.', definition: 'Hyperbole uses deliberate exaggeration that is not meant literally.' },
-      { quote: 'The bees buzzed and the clock ticked.', device: 'Onomatopoeia', hint: 'Words that imitate sounds.', definition: 'Onomatopoeia uses words that phonetically resemble the sounds they describe.' },
-      { quote: 'It was a deafening silence in the room.', device: 'Oxymoron', hint: 'Two opposite ideas placed together.', definition: 'An oxymoron combines contradictory terms to create a striking effect.' },
-      { quote: 'Her smile was sunshine on a rainy day.', device: 'Metaphor', hint: 'A direct comparison without like or as.', definition: 'A metaphor states one thing is another to show a shared quality.' },
-      { quote: 'The classroom was a zoo after lunch.', device: 'Metaphor', hint: 'Comparing two unlike things directly.', definition: 'Metaphor compares two unlike things without using like or as.' },
-      { quote: 'The thunder grumbled angrily overhead.', device: 'Personification', hint: 'Nature given human emotion.', definition: 'Personification gives human emotions or actions to non-human things.' },
-    ];
-
-    const ETYMOLOGY_ROOTS = [
-      { root: 'CHRON', meaning: 'time', correct: ['Chronological', 'Synchronize'], words: [
-        { text: 'Chronological', correct: true, breakdown: 'Chron (time) + logical → in time order' },
-        { text: 'Spectator', correct: false, breakdown: 'Spect (look) — not related to time' },
-        { text: 'Synchronize', correct: true, breakdown: 'Syn (together) + chron (time) → at the same time' },
-        { text: 'Geography', correct: false, breakdown: 'Geo (earth) + graph (write) — about places' },
-      ]},
-      { root: 'GEO', meaning: 'earth', correct: ['Geography', 'Geology'], words: [
-        { text: 'Geography', correct: true, breakdown: 'Geo (earth) + graph (write) → describing Earth' },
-        { text: 'Chronicle', correct: false, breakdown: 'Chron (time) — a record of events' },
-        { text: 'Geology', correct: true, breakdown: 'Geo (earth) + logy (study) → study of Earth' },
-        { text: 'Spectacle', correct: false, breakdown: 'Spect (look) — something impressive to see' },
-      ]},
-      { root: 'SPECT', meaning: 'look / see', correct: ['Spectator', 'Spectacle'], words: [
-        { text: 'Spectator', correct: true, breakdown: 'Spect (look) + ator (one who) → one who watches' },
-        { text: 'Chronometer', correct: false, breakdown: 'Chron (time) — a precise timekeeper' },
-        { text: 'Spectacle', correct: true, breakdown: 'Spect (look) + acle → something worth seeing' },
-        { text: 'Geothermal', correct: false, breakdown: 'Geo (earth) + thermal (heat)' },
-      ]},
-      { root: 'GRAPH', meaning: 'write / draw', correct: ['Autograph', 'Biography'], words: [
-        { text: 'Autograph', correct: true, breakdown: 'Auto (self) + graph (write) → self-written signature' },
-        { text: 'Telephone', correct: false, breakdown: 'Tele (far) + phone (sound)' },
-        { text: 'Biography', correct: true, breakdown: 'Bio (life) + graph (write) → written life story' },
-        { text: 'Thermometer', correct: false, breakdown: 'Thermo (heat) + meter (measure)' },
-      ]},
-      { root: 'BIO', meaning: 'life', correct: ['Biology', 'Biography'], words: [
-        { text: 'Biology', correct: true, breakdown: 'Bio (life) + logy (study) → study of living things' },
-        { text: 'Geology', correct: false, breakdown: 'Geo (earth) — study of rocks' },
-        { text: 'Biography', correct: true, breakdown: 'Bio (life) + graph (write) → life story' },
-        { text: 'Chronology', correct: false, breakdown: 'Chron (time) — timeline of events' },
-      ]},
-    ];
-
-    const VARIABLE_SCENARIOS = [
-      { scenario: 'Mia tests whether plant growth changes when using salt water instead of fresh water. She keeps the same type of plant, pot size, and sunlight for each trial.', iv: 'Type of water (salt vs fresh)', dv: 'Plant growth (height)', controlled: ['Same plant species', 'Same pot size', 'Same sunlight'] },
-      { scenario: 'Jay measures how far a toy car travels when launched from different ramp heights. He uses the same car and surface each time.', iv: 'Ramp height', dv: 'Distance the car travels', controlled: ['Same toy car', 'Same surface', 'Same launch method'] },
-      { scenario: 'A class investigates whether bean seeds germinate faster in warm or cool cupboards. They use identical seeds and equal water.', iv: 'Cupboard temperature', dv: 'Germination speed', controlled: ['Same seed type', 'Equal water', 'Same containers'] },
-      { scenario: 'Sam tests which brand of paper towel absorbs the most water. He uses the same amount of water and identical beakers.', iv: 'Paper towel brand', dv: 'Amount of water absorbed', controlled: ['Same water volume', 'Same beakers', 'Same testing method'] },
-    ];
-
-    const CLASSIFIER_THEMES = [
-      {
-        id: 'physical-chemical',
-        instruction: 'Sort each change as Physical or Chemical.',
-        labelA: 'Physical Change',
-        labelB: 'Chemical Change',
-        poolA: ['Crushing a can', 'Melting ice', 'Dissolving sugar', 'Boiling water', 'Shredding paper', 'Chopping wood', 'Freezing juice', 'Breaking glass', 'Condensing steam', 'Bending wire'],
-        poolB: ['Rusting iron', 'Baking a cake', 'Burning wood', 'Digesting food', 'Fireworks exploding', 'Milk turning sour', 'Cooking an egg', 'Rotting fruit', 'Vinegar and baking soda reaction', 'Bleaching hair'],
-      },
-      {
-        id: 'living-nonliving',
-        instruction: 'Classify each item as Living or Non-Living.',
-        labelA: 'Living',
-        labelB: 'Non-Living',
-        poolA: ['Eucalyptus tree', 'Magpie', 'Bacteria', 'Mushroom', 'Earthworm', 'Kangaroo', 'Algae', 'Moss'],
-        poolB: ['Granite rock', 'River water', 'Oxygen gas', 'Sunlight', 'Plastic bottle', 'Cloud', 'Salt crystal', 'Sand'],
-      },
-      {
-        id: 'renewable-energy',
-        instruction: 'Sort each energy source as Renewable or Non-Renewable.',
-        labelA: 'Renewable Energy',
-        labelB: 'Non-Renewable Energy',
-        poolA: ['Solar power', 'Wind turbines', 'Hydroelectric dam', 'Geothermal heat', 'Biomass energy', 'Wave power'],
-        poolB: ['Coal plant', 'Crude oil', 'Natural gas', 'Uranium nuclear fuel', 'Diesel fuel', 'Petrol engine'],
-      },
-      {
-        id: 'conductors-insulators',
-        instruction: 'Classify each material as a Conductor or Insulator.',
-        labelA: 'Conductor',
-        labelB: 'Insulator',
-        poolA: ['Copper wire', 'Iron nail', 'Aluminium foil', 'Saltwater', 'Gold ring', 'Graphite pencil lead'],
-        poolB: ['Rubber tire', 'Plastic ruler', 'Wooden spoon', 'Glass bottle', 'Pure wool', 'Dry air'],
-      },
-      {
-        id: 'metals-nonmetals',
-        instruction: 'Sort each element as a Metal or Non-Metal.',
-        labelA: 'Metal',
-        labelB: 'Non-Metal',
-        poolA: ['Gold (Au)', 'Iron (Fe)', 'Copper (Cu)', 'Aluminium (Al)', 'Silver (Ag)', 'Magnesium (Mg)'],
-        poolB: ['Carbon (C)', 'Oxygen (O)', 'Helium (He)', 'Sulfur (S)', 'Nitrogen (N)', 'Chlorine (Cl)'],
-      },
-      {
-        id: 'contact-forces',
-        instruction: 'Classify each force as Contact or Non-Contact.',
-        labelA: 'Contact Force',
-        labelB: 'Non-Contact Force',
-        poolA: ['Friction on tires', 'Air resistance on parachute', 'Tension in rope', 'Normal kick force', 'Buoyancy in water'],
-        poolB: ['Gravity pulling an apple', 'Magnetic attraction', 'Electrostatic hair cling', "Earth's magnetic field"],
-      },
-      {
-        id: 'acids-bases',
-        instruction: 'Sort each substance as an Acid or Base / Alkali.',
-        labelA: 'Acid',
-        labelB: 'Base / Alkali',
-        poolA: ['Lemon juice', 'Vinegar', 'Battery acid', 'Stomach acid', 'Coffee', 'Tomatoes'],
-        poolB: ['Soap', 'Bleach', 'Baking soda', 'Toothpaste', 'Ammonia cleaner', 'Drain cleaner'],
-      },
-      {
-        id: 'herbivores-carnivores',
-        instruction: 'Classify each animal as a Primary Consumer (Herbivore) or Secondary Consumer (Carnivore).',
-        labelA: 'Primary Consumer (Herbivore)',
-        labelB: 'Secondary Consumer (Carnivore)',
-        poolA: ['Koala', 'Possum', 'Caterpillar', 'Grasshopper', 'Wallaby', 'Rabbit'],
-        poolB: ['Wedge-tailed eagle', 'Dingo', 'Kookaburra', 'Blue-tongued lizard', 'Tiger snake'],
-      },
-    ];
-
-    let classifierLastThemeId = null;
-
-    function pickClassifierTheme() {
-      let theme;
-      let attempts = 0;
-      do {
-        theme = CLASSIFIER_THEMES[randInt(0, CLASSIFIER_THEMES.length - 1)];
-        attempts += 1;
-      } while (theme.id === classifierLastThemeId && CLASSIFIER_THEMES.length > 1 && attempts < 20);
-      classifierLastThemeId = theme.id;
-      return theme;
-    }
-
     function generateClassifierRound() {
-      const theme = pickClassifierTheme();
+      const theme = pickEligibleFromPool('classifier-theme', CLASSIFIER_THEME_BANK, 1)[0];
       const itemsA = pickN(theme.poolA, 3).map((text) => ({ text, answer: 'A', bucket: null }));
       const itemsB = pickN(theme.poolB, 3).map((text) => ({ text, answer: 'B', bucket: null }));
       const items = shuffle([...itemsA, ...itemsB]);
+      const sig = `${theme.id}|${items.map((i) => i.text).sort().join(',')}`;
+      recordBankSelection('classifier-theme', [theme.id], sig);
 
       return {
         instruction: theme.instruction,
@@ -2660,21 +2714,6 @@
         mistakes: 0,
       };
     }
-
-    const FOOD_WEBS = [
-      { organisms: [
-        { name: 'Eucalyptus leaf', role: 0 }, { name: 'Grasshopper', role: 1 },
-        { name: 'Blue-tongued lizard', role: 2 }, { name: 'Wedge-tailed eagle', role: 3 },
-      ], roles: ['Producer', 'Primary Consumer', 'Secondary Consumer', 'Apex Predator'] },
-      { organisms: [
-        { name: 'Seagrass', role: 0 }, { name: 'Sea urchin', role: 1 },
-        { name: 'Snapper fish', role: 2 }, { name: 'Great white shark', role: 3 },
-      ], roles: ['Producer', 'Primary Consumer', 'Secondary Consumer', 'Apex Predator'] },
-      { organisms: [
-        { name: 'Acacia leaves', role: 0 }, { name: 'Kangaroo', role: 1 },
-        { name: 'Dingo', role: 2 }, { name: 'Saltwater crocodile', role: 3 },
-      ], roles: ['Producer', 'Primary Consumer', 'Secondary Consumer', 'Apex Predator'] },
-    ];
 
     const MAP_FEATURES = [
       { name: 'Mountain', symbol: '▲', color: '#94a3b8' },
@@ -2769,23 +2808,23 @@
       ctx.fillText('S', cx, cy + 20);
     }
 
-    function generateMapChallenge() {
+    function buildMapChallenge() {
       const placements = [];
       const used = new Set();
-      const count = 4;
-      while (placements.length < count) {
+      const shuffledFeatures = shuffle([...MAP_FEATURES]);
+      while (placements.length < 4) {
         const col = MAP_COLS[randInt(0, 4)];
         const row = MAP_ROWS[randInt(0, 4)];
         const key = col + row;
         if (used.has(key)) continue;
         used.add(key);
-        const feat = MAP_FEATURES[placements.length];
+        const feat = shuffledFeatures[placements.length];
         placements.push({ ...feat, col, row });
       }
 
       const target = placements[randInt(0, placements.length - 1)];
       const targetPos = cellToXY(target.col, target.row);
-      const others = placements.filter(p => p.name !== target.name);
+      const others = placements.filter((p) => p.name !== target.name);
       const ref = others[randInt(0, others.length - 1)];
       const refPos = cellToXY(ref.col, ref.row);
 
@@ -2808,19 +2847,25 @@
         question = `The ${ref.name} is at ${ref.col}${ref.row}. Which direction is the ${target.name}?`;
       }
 
-      const wrong = shuffle(directions.filter(d => d !== answer)).slice(0, 3);
+      const wrong = shuffle(directions.filter((d) => d !== answer)).slice(0, 3);
       const options = shuffle([answer, ...wrong]);
-      return { placements, question, answer, options, answerIndex: options.indexOf(answer) };
+      const signature = placements.map((p) => `${p.name}@${p.col}${p.row}`).sort().join('|') + `?${question}`;
+      return { placements, question, answer, options, answerIndex: options.indexOf(answer), signature };
     }
 
-    const SOURCE_ITEMS = [
-      { mode: 'source', modeLabel: 'Primary vs Secondary Source', optionA: 'Primary Source', optionB: 'Secondary Source', text: "A soldier's diary entry from Gallipoli, 1915", answer: 'A', prompt: 'Primary sources are firsthand accounts created at the time of an event.', feedbackCorrect: 'Correct — a diary written during the event is a primary source.', feedbackWrong: 'This is a primary source — it was created by someone who experienced the event firsthand.' },
-      { mode: 'source', modeLabel: 'Primary vs Secondary Source', optionA: 'Primary Source', optionB: 'Secondary Source', text: 'A 2020 textbook chapter about the Gallipoli campaign', answer: 'B', prompt: 'Secondary sources analyse or interpret events after they occurred.', feedbackCorrect: 'Correct — a textbook interprets past events using other sources.', feedbackWrong: 'This is a secondary source — it was created later to explain and analyse the event.' },
-      { mode: 'source', modeLabel: 'Primary vs Secondary Source', optionA: 'Primary Source', optionB: 'Secondary Source', text: 'A photograph of the 1901 Federation ceremony', answer: 'A', prompt: 'Photographs taken at the time are primary evidence.', feedbackCorrect: 'Correct — an original photograph from the event is a primary source.', feedbackWrong: 'This photograph was taken at the time — it is a primary source.' },
-      { mode: 'fact', modeLabel: 'Fact vs Opinion', optionA: 'Fact', optionB: 'Opinion', text: 'Australia has six states and two mainland territories.', answer: 'A', prompt: 'Facts can be verified with evidence; opinions express beliefs or judgments.', feedbackCorrect: 'Correct — this can be verified with official geographic data.', feedbackWrong: 'This is a fact — it can be checked and proven true.' },
-      { mode: 'fact', modeLabel: 'Fact vs Opinion', optionA: 'Fact', optionB: 'Opinion', text: 'The Eureka Stockade was the most important event in Australian history.', answer: 'B', prompt: 'Words like "most important" signal a personal judgment.', feedbackCorrect: 'Correct — "most important" is a value judgment, not a verifiable fact.', feedbackWrong: 'This is an opinion — importance is subjective and debatable.' },
-      { mode: 'fact', modeLabel: 'Fact vs Opinion', optionA: 'Fact', optionB: 'Opinion', text: 'The First Fleet arrived in 1788.', answer: 'A', prompt: 'Historical dates supported by records are facts.', feedbackCorrect: 'Correct — the arrival date is documented historical fact.', feedbackWrong: 'This is a fact — the date is recorded in historical records.' },
-    ];
+    function generateMapChallenge() {
+      const recentSigs = getRecentSignatures('maps');
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const round = buildMapChallenge();
+        if (!recentSigs.has(round.signature)) {
+          recordBankSelection('maps', [`map-${attempt}`], round.signature);
+          return round;
+        }
+      }
+      const round = buildMapChallenge();
+      recordBankSelection('maps', ['map-fallback'], round.signature);
+      return round;
+    }
 
     function selectTimelineEvents() {
       const record = getBankRecord('timeline');
@@ -2851,54 +2896,73 @@
     }
 
     function generateRhetoricRound() {
-      const item = RHETORIC_QUOTES[randInt(0, RHETORIC_QUOTES.length - 1)];
-      const pool = ['Simile', 'Alliteration', 'Hyperbole', 'Onomatopoeia', 'Oxymoron', 'Metaphor', 'Personification'];
-      const wrong = shuffle(pool.filter(p => p !== item.device)).slice(0, 4);
-      const options = shuffle([item.device, ...wrong]);
-      return { ...item, options };
+      return selectUniqueRound('rhetoric', RHETORIC_QUOTE_BANK, (item) => {
+        const devicePool = ['Simile', 'Alliteration', 'Hyperbole', 'Onomatopoeia', 'Oxymoron', 'Metaphor', 'Personification', 'Assonance', 'Repetition', 'Irony'];
+        const wrong = shuffle(devicePool.filter((p) => p !== item.device)).slice(0, 4);
+        const options = shuffle([item.device, ...wrong]);
+        return { ...item, options, signature: item.id };
+      });
     }
+
     function generateEtymologyRound() {
-      const root = ETYMOLOGY_ROOTS[randInt(0, ETYMOLOGY_ROOTS.length - 1)];
-      return { root: root.root, meaning: root.meaning, words: shuffle(root.words.map(w => ({ ...w }))) };
+      return selectUniqueRound('etymology', ETYMOLOGY_ROOT_BANK, (root) => ({
+        root: root.root,
+        meaning: root.meaning,
+        words: shuffle(root.words.map((w) => ({ ...w }))),
+        signature: root.id,
+      }));
     }
+
     function generateVariableRound() {
-      const scenario = VARIABLE_SCENARIOS[randInt(0, VARIABLE_SCENARIOS.length - 1)];
-      const types = [
-        { key: 'iv', question: 'What is the INDEPENDENT variable (what is changed)?' },
-        { key: 'dv', question: 'What is the DEPENDENT variable (what is measured)?' },
-        { key: 'controlled', question: 'Which is a CONTROLLED variable (kept the same)?' },
-      ];
-      const pick = types[randInt(0, types.length - 1)];
-      let answer, options;
-      if (pick.key === 'controlled') {
-        answer = scenario.controlled[randInt(0, scenario.controlled.length - 1)];
-        const wrong = ['Ramp height', 'Water temperature', 'Brand of equipment', 'Amount of sunlight', 'Type of soil', scenario.iv, scenario.dv]
-          .filter(w => w && !scenario.controlled.includes(w));
-        options = shuffle([answer, ...pickN(wrong, 3)]);
-      } else {
-        answer = scenario[pick.key];
-        const wrong = [scenario.iv, scenario.dv, ...scenario.controlled].filter(w => w !== answer);
-        options = shuffle([answer, ...pickN(wrong, 3)]);
-      }
-      return { ...scenario, question: pick.question, answer, options, answerIndex: options.indexOf(answer) };
+      return selectUniqueRound('variable', VARIABLE_SCENARIO_BANK, (scenario) => {
+        const types = [
+          { key: 'iv', question: 'What is the INDEPENDENT variable (what is changed)?' },
+          { key: 'dv', question: 'What is the DEPENDENT variable (what is measured)?' },
+          { key: 'controlled', question: 'Which is a CONTROLLED variable (kept the same)?' },
+        ];
+        const pick = types[randInt(0, types.length - 1)];
+        let answer, options;
+        if (pick.key === 'controlled') {
+          answer = scenario.controlled[randInt(0, scenario.controlled.length - 1)];
+          const wrong = ['Ramp height', 'Water temperature', 'Brand of equipment', 'Amount of sunlight', 'Type of soil', scenario.iv, scenario.dv]
+            .filter((w) => w && !scenario.controlled.includes(w));
+          options = shuffle([answer, ...pickN(wrong, 3)]);
+        } else {
+          answer = scenario[pick.key];
+          const wrong = [scenario.iv, scenario.dv, ...scenario.controlled].filter((w) => w !== answer);
+          options = shuffle([answer, ...pickN(wrong, 3)]);
+        }
+        return {
+          ...scenario,
+          question: pick.question,
+          answer,
+          options,
+          answerIndex: options.indexOf(answer),
+          signature: `${scenario.id}-${pick.key}`,
+        };
+      });
     }
+
     function generateScienceConnections() {
       return createBankConnectionsGame('science-connections', SCIENCE_CATEGORY_BANK);
     }
+
     function generateFoodWebRound() {
-      const web = FOOD_WEBS[randInt(0, FOOD_WEBS.length - 1)];
-      const organisms = web.organisms.map(o => ({ ...o }));
+      const web = selectSingleFromBank('foodweb', FOOD_WEB_BANK);
+      const organisms = web.organisms.map((o) => ({ ...o }));
       const correctOrder = [...organisms].sort((a, b) => a.role - b.role);
       return { organisms, roles: web.roles, order: shuffledOrder(4), correctOrder, checked: false, correct: false, feedback: '' };
     }
+
     function generateTimelineRound() {
       const picked = selectTimelineEvents();
       const events = picked.map((e) => ({ event: e.event, year: e.year, context: e.context }));
       const sortedEvents = [...events].sort((a, b) => a.year - b.year);
       return { events, sortedEvents, order: shuffledOrder(4), checked: false, correct: false, revealed: false, feedback: '' };
     }
+
     function generateSourceRound() {
-      const item = SOURCE_ITEMS[randInt(0, SOURCE_ITEMS.length - 1)];
+      const item = selectSingleFromBank('source', SOURCE_ITEM_BANK);
       return { ...item, answered: false, correct: false, feedback: '', vote: null };
     }
 
