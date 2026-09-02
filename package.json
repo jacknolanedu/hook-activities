@@ -1,15 +1,27 @@
 {
-  "name": "hook-activities",
-  "version": "0.1.0",
+  "name": "classroom-starters-hub",
+  "version": "1.0.0",
+  "description": "Victorian Curriculum v2.0 classroom starter activities for smartboards — Mac and Windows desktop app",
+  "author": "Jack Nolan",
+  "license": "MIT",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
+    "postinstall": "node scripts/copy-vendor.mjs",
+    "build:assets": "node scripts/copy-vendor.mjs && postcss styles/app.css -o assets/styles.css",
+    "electron:dev": "npm run build:assets && electron .",
+    "electron:build": "npm run build:assets && electron-builder",
+    "electron:build:win": "npm run build:assets && electron-builder --win",
+    "electron:build:mac": "npm run build:assets && electron-builder --mac",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "alpinejs": "^3.14.8",
     "framer-motion": "^12.4.7",
+    "lucide": "^0.475.0",
     "lucide-react": "^0.475.0",
     "next": "^15.2.0",
     "react": "^19.0.0",
@@ -20,9 +32,63 @@
     "@types/node": "^22.13.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
     "eslint": "^9.21.0",
     "eslint-config-next": "^15.2.0",
+    "postcss": "^8.5.3",
+    "postcss-cli": "^11.0.0",
     "tailwindcss": "^4.0.9",
     "typescript": "^5.8.2"
+  },
+  "build": {
+    "appId": "edu.vic.classroom-starters-hub",
+    "productName": "Classroom Starters Hub",
+    "copyright": "Copyright © 2026",
+    "asar": true,
+    "files": [
+      "index.html",
+      "assets/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "Classroom-Starters-Hub-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "artifactName": "Classroom-Starters-Hub-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Classroom Starters Hub"
+    },
+    "portable": {
+      "artifactName": "Classroom-Starters-Hub-Portable-${version}.${ext}"
+    }
   }
 }

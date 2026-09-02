@@ -1,46 +1,63 @@
 # Classroom Starters Hub
 
-A free, smartboard-friendly collection of **20 procedural daily starter activities** aligned with the **Victorian Curriculum v2.0** — Mathematics, English, Science, and Humanities.
+A **desktop application** for Mac and Windows with **20 procedural daily starter activities** aligned with the **Victorian Curriculum v2.0** — Mathematics, English, Science, and Humanities.
 
-No install required. Works on **Mac** and **Windows** in any modern web browser.
+Built for classroom smartboards and projectors. **No browser setup required** — install and launch like any other program.
 
 ---
 
-## Download (Mac or PC)
+## Download for Teachers (Mac or PC)
 
-### Option 1 — Download ZIP (easiest)
+Go to **Releases** and download the installer for your computer:
 
-1. Open the GitHub repo: **https://github.com/jacknolanedu/hook-activities**
-2. Click the green **Code** button.
-3. Choose **Download ZIP**.
-4. Unzip the folder on your computer.
-5. Open **`index.html`** in Chrome, Edge, Safari, or Firefox.
+**https://github.com/jacknolanedu/hook-activities/releases**
 
-> **Tip:** Double-click `index.html`, or right-click → *Open With* → your browser.
+| Platform | Download |
+|----------|----------|
+| **Windows** | `Classroom-Starters-Hub-Setup-1.0.0.exe` (installer) or portable `.exe` |
+| **Mac** | `Classroom-Starters-Hub-1.0.0.dmg` (Intel or Apple Silicon) |
 
-### Option 2 — Clone with Git
+### After installing
+
+1. Launch **Classroom Starters Hub** from your desktop or Start menu / Applications folder.
+2. Use the **subject filter** to browse Math, English, Science, or Humanities activities.
+3. Click any card to start — use the **5-minute timer** and **fullscreen** button in the top bar.
+
+Works **offline** once installed (all styles and scripts are bundled inside the app).
+
+---
+
+## For Developers — Build from Source
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20 or later
+- npm
+
+### Run locally (development)
 
 ```bash
 git clone https://github.com/jacknolanedu/hook-activities.git
 cd hook-activities
+npm install
+npm run electron:dev
 ```
 
-Then open `index.html` in your browser.
+### Build installers
 
----
+**Windows (on a PC):**
+```bash
+npm run electron:build:win
+```
+Output: `dist/Classroom-Starters-Hub-Setup-1.0.0.exe`
 
-## Using in the Classroom
+**Mac (on a Mac):**
+```bash
+npm run electron:build:mac
+```
+Output: `dist/Classroom-Starters-Hub-1.0.0.dmg`
 
-1. **Project** `index.html` fullscreen on your smartboard or projector.
-2. Use the **subject filter** (Math, English, Science, Humanities) to find activities.
-3. Click any activity card to launch it.
-4. Use the **5-minute timer** in the top bar to pace the starter.
-5. Click **← Back to Launcher** or **New Game / Regenerate** between rounds.
-
-### Requirements
-
-- A modern web browser (Chrome, Edge, Firefox, or Safari)
-- An internet connection (the app loads Tailwind CSS, Alpine.js, and icons from CDNs on first open)
+Pushing a version tag (e.g. `v1.0.1`) triggers GitHub Actions to build Windows and Mac installers automatically.
 
 ---
 
@@ -60,25 +77,15 @@ Historical Timeline Order · Map Skills & Coordinates · Source Evaluation
 
 ---
 
-## File Guide
+## Project Structure
 
-| File | Purpose |
+| Path | Purpose |
 |------|---------|
-| **`index.html`** | **Main app** — open this in a browser. Single self-contained file with all games. |
-| `README.md` | This guide |
-| `app/`, `components/` | Optional Next.js development version (not needed for classroom use) |
-
-For teachers, **`index.html` is all you need**.
-
----
-
-## Sharing with Colleagues
-
-Send them the GitHub link:
-
-**https://github.com/jacknolanedu/hook-activities**
-
-They can download the ZIP and run `index.html` locally — no account or server setup required.
+| `index.html` | Main app UI and game logic |
+| `electron/` | Desktop app shell (Electron) |
+| `assets/` | Bundled CSS and JavaScript (built on install) |
+| `styles/app.css` | Tailwind source for offline styles |
+| `app/`, `components/` | Optional Next.js dev version |
 
 ---
 
