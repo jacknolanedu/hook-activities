@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Classroom Math Starters</title>
+  <title>Classroom Starters Hub — Victorian Curriculum v2.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -33,9 +33,14 @@
     .nerdle-correct { background-color: #22c55e; color: #052e16; }
     .nerdle-present { background-color: #eab308; color: #422006; }
     .nerdle-absent { background-color: #475569; color: #e2e8f0; }
+    @keyframes estimationReveal {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .estimation-reveal { animation: estimationReveal 0.5s ease-out forwards; }
   </style>
 </head>
-<body class="min-h-screen bg-slate-900 text-white antialiased" x-data="mathStartersHub()" x-init="init()" x-cloak>
+<body class="min-h-screen bg-slate-900 text-white antialiased" x-data="classroomStartersHub()" x-init="init()" x-cloak>
 
   <!-- ═══════════════ TOP BAR ═══════════════ -->
   <header class="sticky top-0 z-50 border-b-4 border-sky-500 bg-slate-950 px-4 py-4 shadow-2xl sm:px-8">
@@ -43,8 +48,9 @@
       <div class="flex flex-wrap items-center gap-4">
         <button @click="goHome()" class="text-left transition-opacity hover:opacity-90" title="Return to launcher">
           <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
-            Classroom Math Starters
+            Classroom Starters Hub
           </h1>
+          <p class="text-sm font-semibold text-sky-400 sm:text-base">Victorian Curriculum v2.0</p>
         </button>
         <button @click="goHome()"
           class="flex min-h-14 items-center gap-2 rounded-xl border-2 border-slate-600 bg-slate-800 px-5 text-xl font-bold hover:bg-slate-700"
@@ -95,19 +101,37 @@
 
   <!-- ═══════════════ LANDING PAGE ═══════════════ -->
   <main x-show="currentView === 'home'" x-transition.opacity class="mx-auto max-w-7xl p-4 sm:p-8">
-    <p class="mb-8 text-center text-2xl text-slate-300 sm:text-3xl">Choose a daily starter activity for your class</p>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <template x-for="card in hubCards" :key="card.id">
+    <p class="mb-6 text-center text-2xl text-slate-300 sm:text-3xl">Choose a daily starter activity for your class</p>
+
+    <!-- Subject filter pills -->
+    <div class="mb-8 flex flex-wrap items-center justify-center gap-3">
+      <template x-for="sub in subjects" :key="sub.id">
+        <button @click="subjectFilter = sub.id"
+          class="min-h-14 rounded-full border-2 px-6 text-lg font-bold transition-all sm:px-8 sm:text-xl"
+          :class="subjectFilter === sub.id
+            ? 'border-sky-400 bg-sky-600 text-white shadow-lg scale-105'
+            : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-slate-500 hover:bg-slate-700'">
+          <span x-text="sub.emoji + ' ' + sub.label"></span>
+        </button>
+      </template>
+    </div>
+
+    <p class="mb-6 text-center text-xl text-slate-400" x-show="subjectFilter !== 'all'">
+      Showing <span class="font-bold text-white" x-text="filteredHubCards.length"></span> activities
+    </p>
+
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <template x-for="card in filteredHubCards" :key="card.id">
         <button @click="launchActivity(card.id)"
-          class="hub-card flex min-h-56 flex-col items-start rounded-2xl border-2 border-slate-600 bg-slate-800 p-8 text-left shadow-lg hover:border-sky-400">
+          class="hub-card flex min-h-48 flex-col items-start rounded-2xl border-2 border-slate-600 bg-slate-800 p-6 text-left shadow-lg hover:border-sky-400 sm:min-h-52 sm:p-6">
           <div class="mb-4 flex w-full items-start justify-between gap-4">
             <div class="flex h-16 w-16 items-center justify-center rounded-xl" :class="card.color">
               <i :data-lucide="card.icon" class="h-9 w-9 text-white"></i>
             </div>
             <span class="rounded-full px-4 py-2 text-lg font-bold" :class="card.badgeClass" x-text="card.badge"></span>
           </div>
-          <h2 class="mb-3 text-3xl font-extrabold text-white sm:text-4xl" x-text="card.title"></h2>
-          <p class="mb-4 text-xl leading-relaxed text-slate-300 sm:text-2xl" x-text="card.description"></p>
+          <h2 class="mb-2 text-2xl font-extrabold text-white xl:text-3xl" x-text="card.title"></h2>
+          <p class="text-lg leading-relaxed text-slate-300 xl:text-xl" x-text="card.description"></p>
           <div x-show="card.subOptions" class="flex flex-wrap gap-2">
             <template x-for="sub in card.subOptions" :key="sub">
               <span class="rounded-lg bg-slate-700 px-3 py-1 text-lg font-semibold text-slate-200" x-text="sub"></span>
@@ -531,6 +555,515 @@
         </div>
       </div>
     </section>
+
+    <!-- ─── GAME 7: MATH TERMLE ─── -->
+    <section x-show="currentView === 'termle'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Math Termle</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Guess the 5-letter math word in 6 tries!</p>
+
+      <div x-show="termle.won" class="celebrate mb-6 rounded-2xl border-4 border-emerald-400 bg-emerald-600 px-8 py-6 text-center text-4xl font-extrabold">
+        🎉 Correct: <span x-text="termle.secret"></span>!
+      </div>
+      <div x-show="termle.lost" class="mb-6 rounded-2xl border-4 border-red-400 bg-red-600 px-8 py-6 text-center text-3xl font-bold">
+        The word was: <span x-text="termle.secret"></span>
+      </div>
+
+      <div class="mx-auto mb-6 max-w-md space-y-2">
+        <template x-for="(row, ri) in termle.rows" :key="ri">
+          <div class="flex justify-center gap-2">
+            <template x-for="(cell, ci) in row.cells" :key="ci">
+              <div class="flex h-14 w-14 items-center justify-center rounded-lg border-2 text-2xl font-extrabold sm:h-16 sm:w-16"
+                :class="{
+                  'border-slate-600 bg-slate-800': !cell.char,
+                  'nerdle-correct border-emerald-400': cell.state === 'correct',
+                  'nerdle-present border-amber-400': cell.state === 'present',
+                  'nerdle-absent border-slate-500': cell.state === 'absent',
+                  'bg-slate-700 border-slate-500 text-white': cell.char && !cell.state
+                }" x-text="cell.char"></div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <div x-show="termle.showHint" class="mx-auto mb-6 max-w-xl rounded-xl border-2 border-amber-400 bg-amber-900/40 px-6 py-4 text-center text-xl font-semibold text-amber-100">
+        <span x-text="termle.hint"></span>
+      </div>
+
+      <div class="mx-auto mb-4 max-w-2xl">
+        <template x-for="(row, ri) in termle.keyboard" :key="ri">
+          <div class="mb-2 flex justify-center gap-1.5">
+            <template x-for="key in row" :key="key">
+              <button @click="termleKey(key)" :disabled="termle.won || termle.lost"
+                class="min-h-12 min-w-10 rounded-lg px-2 text-lg font-bold sm:min-h-14 sm:min-w-12 sm:text-xl"
+                :class="termle.keyState[key] === 'correct' ? 'nerdle-correct' : termle.keyState[key] === 'present' ? 'nerdle-present' : termle.keyState[key] === 'absent' ? 'nerdle-absent' : 'bg-slate-600 hover:bg-slate-500'"
+                x-text="key"></button>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-4">
+        <button @click="termle.showHint = !termle.showHint"
+          class="min-h-14 rounded-xl bg-amber-600 px-8 text-xl font-bold hover:bg-amber-500">Hint</button>
+        <button @click="termleSubmit()" :disabled="termle.currentGuess.length !== 5 || termle.won || termle.lost"
+          class="min-h-14 rounded-xl bg-emerald-600 px-8 text-xl font-bold hover:bg-emerald-500 disabled:opacity-40">Submit</button>
+        <button @click="termleNewGame()"
+          class="min-h-14 rounded-xl bg-violet-600 px-8 text-xl font-bold hover:bg-violet-500">New Word</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 8: BALANCE SCALE ─── -->
+    <section x-show="currentView === 'balance'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Balance Scale</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Both pans are balanced. What does one <span class="text-yellow-400">★</span> weigh?</p>
+
+      <div class="mx-auto mb-8 max-w-4xl">
+        <div class="flex items-end justify-center gap-4">
+          <div class="flex-1 rounded-2xl border-2 border-sky-500 bg-slate-800 p-6 text-center">
+            <p class="mb-4 text-2xl font-bold text-sky-400">LEFT PAN</p>
+            <div class="mb-4 flex flex-wrap justify-center gap-2 text-4xl">
+              <template x-for="i in balance.leftStars" :key="'ls'+i"><span>⭐</span></template>
+              <template x-for="i in balance.leftCircles" :key="'lc'+i"><span>🔵</span></template>
+            </div>
+            <p class="text-3xl font-extrabold" x-text="balance.leftTotal + ' units'"></p>
+          </div>
+          <div class="pb-16 text-5xl font-bold text-slate-400">⚖️</div>
+          <div class="flex-1 rounded-2xl border-2 border-orange-500 bg-slate-800 p-6 text-center">
+            <p class="mb-4 text-2xl font-bold text-orange-400">RIGHT PAN</p>
+            <div class="mb-4 flex flex-wrap justify-center gap-2 text-4xl">
+              <template x-for="i in balance.rightStars" :key="'rs'+i"><span>⭐</span></template>
+              <template x-for="i in balance.rightCircles" :key="'rc'+i"><span>🔵</span></template>
+            </div>
+            <p class="text-3xl font-extrabold" x-text="balance.rightTotal + ' units'"></p>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="balance.stepIndex < balance.steps.length" class="mx-auto mb-6 max-w-2xl rounded-xl border-2 border-violet-500 bg-violet-900/30 px-6 py-4 text-center">
+        <p class="text-xl text-violet-300">Step <span x-text="balance.stepIndex + 1"></span></p>
+        <p class="text-2xl font-bold" x-text="balance.steps[balance.stepIndex]"></p>
+        <button @click="balance.stepIndex++" class="mt-4 min-h-12 rounded-xl bg-violet-600 px-6 text-xl font-bold hover:bg-violet-500">Next Step</button>
+      </div>
+
+      <p class="mb-4 text-center text-3xl font-bold">What is the weight of one ⭐?</p>
+      <div class="mb-6 flex flex-wrap justify-center gap-4">
+        <template x-for="(opt, idx) in balance.choices" :key="idx">
+          <button @click="balanceGuess(idx)"
+            class="flex h-20 w-20 items-center justify-center rounded-2xl border-2 text-3xl font-extrabold"
+            :class="balance.answered && opt === balance.starWeight ? 'border-emerald-400 bg-emerald-600' : balance.selected === idx && balance.answered && opt !== balance.starWeight ? 'border-red-400 bg-red-800' : 'border-slate-500 bg-slate-700 hover:bg-slate-600'"
+            x-text="opt"></button>
+        </template>
+      </div>
+      <p x-show="balance.answered && balance.selected !== null" class="mb-6 text-center text-2xl font-bold"
+        :class="balance.choices[balance.selected] === balance.starWeight ? 'text-emerald-400' : 'text-red-400'"
+        x-text="balance.choices[balance.selected] === balance.starWeight ? 'Correct! ⭐ = ' + balance.starWeight : 'Not quite — ⭐ = ' + balance.starWeight"></p>
+
+      <div class="flex justify-center">
+        <button @click="balanceNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Puzzle</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 9: PATTERN CONTINUATION ─── -->
+    <section x-show="currentView === 'pattern'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Pattern Continuation</h2>
+      <p class="mb-2 text-center text-2xl text-slate-300">What comes next in the sequence?</p>
+      <p class="mb-8 text-center text-xl text-slate-400" x-text="pattern.typeLabel"></p>
+
+      <div class="mx-auto mb-10 flex max-w-4xl flex-wrap items-center justify-center gap-4">
+        <template x-for="(term, idx) in pattern.display" :key="idx">
+          <span class="flex h-20 min-w-20 items-center justify-center rounded-xl border-2 border-slate-500 bg-slate-800 px-4 text-3xl font-extrabold sm:h-24 sm:min-w-24 sm:text-4xl"
+            :class="term === '?' ? 'border-sky-400 text-sky-400' : 'text-white'"
+            x-text="term"></span>
+        </template>
+      </div>
+
+      <div class="mx-auto mb-8 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <template x-for="(opt, idx) in pattern.choices" :key="idx">
+          <button @click="patternGuess(idx)"
+            class="min-h-16 rounded-xl border-2 px-6 text-2xl font-bold"
+            :class="pattern.answered && opt === pattern.answer ? 'border-emerald-400 bg-emerald-600' : pattern.selected === idx && pattern.answered ? 'border-red-400 bg-red-800' : 'border-slate-600 bg-slate-700 hover:bg-slate-600'"
+            x-text="opt"></button>
+        </template>
+      </div>
+
+      <div x-show="pattern.showRule" class="mx-auto mb-8 max-w-2xl rounded-xl border-2 border-sky-500 bg-sky-900/30 px-6 py-4 text-center text-2xl font-bold text-sky-200">
+        Rule: <span x-text="pattern.rule"></span>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-4">
+        <button @click="pattern.showRule = !pattern.showRule"
+          class="min-h-14 rounded-xl bg-sky-600 px-8 text-xl font-bold hover:bg-sky-500"
+          x-text="pattern.showRule ? 'Hide Pattern Rule' : 'Show Pattern Rule'"></button>
+        <button @click="patternNewGame()" class="min-h-14 rounded-xl bg-violet-600 px-8 text-xl font-bold hover:bg-violet-500">New Sequence</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 10: ESTIMATION STATION ─── -->
+    <section x-show="currentView === 'estimation'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Estimation Station</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300" x-text="estimation.question"></p>
+
+      <div class="relative mx-auto mb-8 max-w-3xl">
+        <canvas x-ref="estimationCanvas" class="mx-auto block w-full max-w-3xl rounded-2xl border-2 border-slate-600 bg-slate-900"></canvas>
+      </div>
+
+      <div class="mx-auto mb-8 max-w-xl text-center">
+        <div x-show="!estimation.revealed">
+          <p class="mb-6 text-3xl font-bold text-white">What is your class estimate?</p>
+          <button @click="estimationReveal()"
+            class="min-h-16 rounded-xl bg-emerald-600 px-12 text-2xl font-bold shadow-lg transition hover:bg-emerald-500 active:scale-95">
+            Reveal Answer
+          </button>
+        </div>
+
+        <div x-show="estimation.revealed" x-transition.opacity class="estimation-reveal rounded-2xl border-2 border-emerald-500/50 bg-slate-800 p-8">
+          <p class="text-4xl font-extrabold text-emerald-400">
+            Answer: <span x-text="estimation.answerDisplay"></span>
+          </p>
+          <div class="mt-6 space-y-3 text-xl text-slate-300">
+            <p>Close estimate (±5%): <span class="font-bold text-sky-400" x-text="estimation.range5"></span></p>
+            <p>Good estimate (±10%): <span class="font-bold text-amber-400" x-text="estimation.range10"></span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-center">
+        <button @click="estimationNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Challenge</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 11: LITERARY CONNECTIONS ─── -->
+    <section x-show="currentView === 'literary'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Literary Connections</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Group 16 words into 4 literary or grammatical categories!</p>
+      <div class="mb-4 flex flex-wrap items-center justify-center gap-4">
+        <span class="text-2xl font-semibold text-slate-300">Mistakes:</span>
+        <div class="flex gap-2">
+          <template x-for="i in 4" :key="i">
+            <i data-lucide="heart" class="h-9 w-9" :class="i <= litConn.lives ? 'fill-red-500 text-red-500' : 'fill-slate-700 text-slate-600'"></i>
+          </template>
+        </div>
+        <button @click="litConnDeselectAll()" class="min-h-14 rounded-xl bg-slate-600 px-6 text-xl font-bold hover:bg-slate-500">Deselect All</button>
+      </div>
+      <p x-show="litConn.feedback" x-text="litConn.feedback" class="mb-4 text-center text-3xl font-bold text-red-400"></p>
+      <p x-show="litConn.solved.length === 4" class="mb-4 rounded-xl bg-emerald-600 py-4 text-center text-3xl font-bold">All groups found!</p>
+      <div class="mb-4 flex flex-col gap-3">
+        <template x-for="cat in litConnSolvedCategories" :key="cat.id">
+          <div class="flex w-full flex-wrap items-center justify-center gap-4 rounded-xl px-6 py-5" :class="categoryBannerClass(cat.difficulty)">
+            <span class="text-2xl font-extrabold md:text-3xl" x-text="cat.title"></span>
+            <template x-for="item in cat.items" :key="item">
+              <span class="rounded-lg bg-black/15 px-4 py-2 text-xl font-bold md:text-2xl" x-text="item"></span>
+            </template>
+          </div>
+        </template>
+      </div>
+      <div class="mx-auto grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4" :class="{ shake: litConn.shaking }">
+        <template x-for="tile in litConnRemainingTiles" :key="tile.id">
+          <button @click="litConnToggleTile(tile.id)" :disabled="litConn.solved.length === 4 || litConn.lives === 0"
+            class="flex min-h-28 items-center justify-center rounded-xl border-2 px-3 py-4 text-xl font-bold transition-colors sm:min-h-32 sm:text-2xl"
+            :class="litConn.selected.includes(tile.id) ? 'border-sky-400 bg-slate-500 ring-2 ring-sky-400' : 'border-slate-500 bg-slate-700 hover:bg-slate-600'">
+            <span x-text="tile.text"></span>
+          </button>
+        </template>
+      </div>
+      <div class="mt-8 flex flex-col items-center gap-6">
+        <button @click="litConnSubmit()" :disabled="litConn.selected.length !== 4 || litConn.solved.length === 4 || litConn.lives === 0"
+          class="min-h-16 min-w-56 rounded-xl bg-sky-600 px-12 text-3xl font-bold hover:bg-sky-500 disabled:opacity-40">
+          Submit (<span x-text="litConn.selected.length"></span>/4)
+        </button>
+        <button @click="literaryNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 12: RHETORIC & DEVICE DETECTIVE ─── -->
+    <section x-show="currentView === 'rhetoric'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Rhetoric &amp; Device Detective</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Identify the literary technique in the quote below.</p>
+      <div class="mx-auto mb-8 max-w-3xl rounded-2xl border-4 border-amber-500 bg-slate-800 p-10 text-center shadow-xl">
+        <p class="text-3xl font-medium italic leading-relaxed text-amber-100 sm:text-4xl">
+          "<span x-text="rhetoric.quote"></span>"
+        </p>
+      </div>
+      <div class="mx-auto mb-8 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <template x-for="(opt, idx) in rhetoric.options" :key="opt">
+          <button @click="rhetoricGuess(idx)" :disabled="rhetoric.answered"
+            class="min-h-16 rounded-xl border-2 px-6 text-2xl font-bold transition-colors"
+            :class="rhetoricOptionClass(idx)">
+            <span x-text="opt"></span>
+          </button>
+        </template>
+      </div>
+      <div class="mb-8 flex flex-wrap justify-center gap-4">
+        <button @click="rhetoric.showHint = !rhetoric.showHint" class="min-h-14 rounded-xl bg-slate-600 px-8 text-xl font-bold hover:bg-slate-500">
+          <span x-text="rhetoric.showHint ? 'Hide Hint' : 'Show Hint'"></span>
+        </button>
+        <button @click="rhetoricReveal()" :disabled="rhetoric.revealed" class="min-h-14 rounded-xl bg-emerald-600 px-8 text-xl font-bold hover:bg-emerald-500 disabled:opacity-40">Reveal Answer</button>
+      </div>
+      <p x-show="rhetoric.showHint" x-transition class="mx-auto mb-6 max-w-2xl text-center text-xl text-sky-300" x-text="rhetoric.hint"></p>
+      <div x-show="rhetoric.revealed" x-transition class="mx-auto mb-8 max-w-2xl rounded-2xl border-2 border-emerald-500 bg-emerald-900/40 p-6 text-center">
+        <p class="text-3xl font-bold text-emerald-400" x-text="'Answer: ' + rhetoric.device"></p>
+        <p class="mt-3 text-xl text-slate-300" x-text="rhetoric.definition"></p>
+      </div>
+      <div class="flex justify-center">
+        <button @click="rhetoricNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 13: ETYMOLOGY & ROOT WORD BUILDER ─── -->
+    <section x-show="currentView === 'etymology'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Etymology &amp; Root Word Builder</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Which words contain this root? Match the meaning!</p>
+      <div class="mx-auto mb-8 max-w-xl rounded-2xl border-4 border-pink-500 bg-slate-800 p-8 text-center">
+        <p class="text-5xl font-extrabold text-pink-400" x-text="etymology.root"></p>
+        <p class="mt-2 text-2xl text-slate-300" x-text="'= ' + etymology.meaning"></p>
+      </div>
+      <div class="mx-auto mb-8 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <template x-for="(word, idx) in etymology.words" :key="word.text">
+          <button @click="etymologyToggle(idx)" :disabled="etymology.answered"
+            class="min-h-20 rounded-xl border-2 px-6 text-left text-2xl font-bold transition-colors"
+            :class="etymologyWordClass(idx)">
+            <span x-text="word.text"></span>
+            <span x-show="etymology.answered && etymology.selected.includes(idx)" class="mt-2 block text-lg font-normal text-slate-300" x-text="word.breakdown"></span>
+          </button>
+        </template>
+      </div>
+      <div class="mb-8 flex justify-center gap-4">
+        <button @click="etymologyCheck()" :disabled="etymology.answered || etymology.selected.length === 0"
+          class="min-h-16 rounded-xl bg-sky-600 px-10 text-2xl font-bold hover:bg-sky-500 disabled:opacity-40">Check Answers</button>
+        <button @click="etymologyReveal()" :disabled="etymology.revealed" class="min-h-16 rounded-xl bg-emerald-600 px-10 text-2xl font-bold hover:bg-emerald-500 disabled:opacity-40">Reveal All</button>
+      </div>
+      <p x-show="etymology.answered" class="mb-6 text-center text-2xl font-bold" :class="etymology.correct ? 'text-emerald-400' : 'text-amber-400'" x-text="etymology.feedback"></p>
+      <div class="flex justify-center">
+        <button @click="etymologyNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">Generate New Root</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 14: VARIABLE SPOTTER ─── -->
+    <section x-show="currentView === 'variable'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Variable Spotter</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Science Inquiry Skills — identify variables in the experiment.</p>
+      <div class="mx-auto mb-8 max-w-3xl rounded-2xl border-2 border-slate-600 bg-slate-800 p-8">
+        <p class="text-2xl leading-relaxed text-slate-200" x-text="variable.scenario"></p>
+      </div>
+      <p class="mb-6 text-center text-3xl font-bold text-sky-400" x-text="variable.question"></p>
+      <div class="mx-auto mb-8 grid max-w-3xl grid-cols-1 gap-4">
+        <template x-for="(opt, idx) in variable.options" :key="opt">
+          <button @click="variableGuess(idx)" :disabled="variable.answered"
+            class="min-h-16 rounded-xl border-2 px-6 text-xl font-bold transition-colors sm:text-2xl"
+            :class="variableOptionClass(idx)">
+            <span x-text="opt"></span>
+          </button>
+        </template>
+      </div>
+      <button @click="variable.showBreakdown = !variable.showBreakdown" class="mx-auto mb-6 flex min-h-14 rounded-xl bg-slate-600 px-8 text-xl font-bold hover:bg-slate-500">
+        <span x-text="variable.showBreakdown ? 'Hide Scientific Method Breakdown' : 'Show Scientific Method Breakdown'"></span>
+      </button>
+      <div x-show="variable.showBreakdown" x-transition class="mx-auto mb-8 max-w-3xl space-y-4 rounded-2xl border-2 border-emerald-500/50 bg-slate-800 p-8">
+        <p class="text-xl"><span class="font-bold text-emerald-400">Independent Variable:</span> <span x-text="variable.iv"></span></p>
+        <p class="text-xl"><span class="font-bold text-sky-400">Dependent Variable:</span> <span x-text="variable.dv"></span></p>
+        <p class="text-xl"><span class="font-bold text-amber-400">Controlled Variables:</span> <span x-text="variable.controlled.join(', ')"></span></p>
+      </div>
+      <div class="flex justify-center">
+        <button @click="variableNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 15: SCIENCE CONNECTIONS ─── -->
+    <section x-show="currentView === 'sciconnect'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Science Connections</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Group 16 science terms into 4 Victorian Science categories!</p>
+      <div class="mb-4 flex flex-wrap items-center justify-center gap-4">
+        <span class="text-2xl font-semibold text-slate-300">Mistakes:</span>
+        <div class="flex gap-2">
+          <template x-for="i in 4" :key="i">
+            <i data-lucide="heart" class="h-9 w-9" :class="i <= sciConn.lives ? 'fill-red-500 text-red-500' : 'fill-slate-700 text-slate-600'"></i>
+          </template>
+        </div>
+        <button @click="sciConnDeselectAll()" class="min-h-14 rounded-xl bg-slate-600 px-6 text-xl font-bold hover:bg-slate-500">Deselect All</button>
+      </div>
+      <p x-show="sciConn.feedback" x-text="sciConn.feedback" class="mb-4 text-center text-3xl font-bold text-red-400"></p>
+      <p x-show="sciConn.solved.length === 4" class="mb-4 rounded-xl bg-emerald-600 py-4 text-center text-3xl font-bold">All groups found!</p>
+      <div class="mb-4 flex flex-col gap-3">
+        <template x-for="cat in sciConnSolvedCategories" :key="cat.id">
+          <div class="flex w-full flex-wrap items-center justify-center gap-4 rounded-xl px-6 py-5" :class="categoryBannerClass(cat.difficulty)">
+            <span class="text-2xl font-extrabold md:text-3xl" x-text="cat.title"></span>
+            <template x-for="item in cat.items" :key="item">
+              <span class="rounded-lg bg-black/15 px-4 py-2 text-xl font-bold md:text-2xl" x-text="item"></span>
+            </template>
+          </div>
+        </template>
+      </div>
+      <div class="mx-auto grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4" :class="{ shake: sciConn.shaking }">
+        <template x-for="tile in sciConnRemainingTiles" :key="tile.id">
+          <button @click="sciConnToggleTile(tile.id)" :disabled="sciConn.solved.length === 4 || sciConn.lives === 0"
+            class="flex min-h-28 items-center justify-center rounded-xl border-2 px-3 py-4 text-xl font-bold transition-colors sm:min-h-32 sm:text-2xl"
+            :class="sciConn.selected.includes(tile.id) ? 'border-sky-400 bg-slate-500 ring-2 ring-sky-400' : 'border-slate-500 bg-slate-700 hover:bg-slate-600'">
+            <span x-text="tile.text"></span>
+          </button>
+        </template>
+      </div>
+      <div class="mt-8 flex flex-col items-center gap-6">
+        <button @click="sciConnSubmit()" :disabled="sciConn.selected.length !== 4 || sciConn.solved.length === 4 || sciConn.lives === 0"
+          class="min-h-16 min-w-56 rounded-xl bg-sky-600 px-12 text-3xl font-bold hover:bg-sky-500 disabled:opacity-40">
+          Submit (<span x-text="sciConn.selected.length"></span>/4)
+        </button>
+        <button @click="sciconnectNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 16: CLASSIFIER ─── -->
+    <section x-show="currentView === 'classifier'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Science Classifier</h2>
+      <p class="mb-2 text-center text-2xl text-slate-300">Sort each item into the correct category.</p>
+      <p class="mb-6 text-center text-xl text-slate-400" x-text="classifier.instruction"></p>
+      <p x-show="classifier.mistakes > 0 && !classifier.checked" class="mb-4 text-center text-xl font-semibold text-amber-400">
+        Mistakes: <span x-text="classifier.mistakes"></span>
+      </p>
+      <div class="mx-auto mb-6 flex max-w-4xl flex-wrap justify-center gap-3">
+        <template x-for="(item, idx) in classifier.items" :key="classifier.themeId + '-' + idx">
+          <button x-show="item.bucket === null" @click="classifierSelectItem(idx)"
+            class="min-h-14 rounded-xl border-2 px-6 text-xl font-bold transition-colors"
+            :class="classifier.selectedItem === idx ? 'border-sky-400 bg-sky-700' : 'border-slate-500 bg-slate-700 hover:bg-slate-600'">
+            <span x-text="item.text"></span>
+          </button>
+        </template>
+      </div>
+      <div class="mx-auto mb-8 grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
+        <button @click="classifierAssign('A')" class="min-h-40 rounded-2xl border-4 border-emerald-500 bg-emerald-900/30 p-6 text-center hover:bg-emerald-900/50">
+          <p class="text-3xl font-extrabold text-emerald-400" x-text="classifier.labelA"></p>
+          <div class="mt-4 flex flex-wrap justify-center gap-2">
+            <template x-for="item in classifierBucketA" :key="item.text">
+              <span class="rounded-lg bg-emerald-700 px-4 py-2 text-lg font-bold" x-text="item.text"></span>
+            </template>
+          </div>
+        </button>
+        <button @click="classifierAssign('B')" class="min-h-40 rounded-2xl border-4 border-amber-500 bg-amber-900/30 p-6 text-center hover:bg-amber-900/50">
+          <p class="text-3xl font-extrabold text-amber-400" x-text="classifier.labelB"></p>
+          <div class="mt-4 flex flex-wrap justify-center gap-2">
+            <template x-for="item in classifierBucketB" :key="item.text">
+              <span class="rounded-lg bg-amber-700 px-4 py-2 text-lg font-bold" x-text="item.text"></span>
+            </template>
+          </div>
+        </button>
+      </div>
+      <p x-show="classifier.done" class="mb-6 text-center text-3xl font-bold" :class="classifier.allCorrect ? 'text-emerald-400' : 'text-amber-400'" x-text="classifier.feedback"></p>
+      <div class="flex justify-center gap-4">
+        <button @click="classifierCheck()" :disabled="!classifier.done || classifier.checked" class="min-h-16 rounded-xl bg-sky-600 px-10 text-2xl font-bold hover:bg-sky-500 disabled:opacity-40">Check Sorting</button>
+        <button @click="classifierNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 17: FOOD WEB REORDER ─── -->
+    <section x-show="currentView === 'foodweb'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Food Web / Chain Reorder</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Order organisms along the energy flow: Producer → Consumer → Apex Predator</p>
+      <div class="mx-auto mb-8 max-w-2xl space-y-3">
+        <template x-for="(idx, pos) in foodweb.order" :key="foodweb.organisms[idx].name">
+          <div class="flex items-center gap-4 rounded-xl border-2 border-slate-600 bg-slate-800 p-4">
+            <span class="text-2xl font-bold text-sky-400" x-text="(pos + 1) + '.'"></span>
+            <span class="flex-1 text-2xl font-bold" x-text="foodweb.organisms[idx].name"></span>
+            <button @click="foodwebMove(pos, -1)" :disabled="pos === 0" class="min-h-12 min-w-12 rounded-lg bg-slate-600 text-2xl font-bold hover:bg-slate-500 disabled:opacity-30">↑</button>
+            <button @click="foodwebMove(pos, 1)" :disabled="pos === 3" class="min-h-12 min-w-12 rounded-lg bg-slate-600 text-2xl font-bold hover:bg-slate-500 disabled:opacity-30">↓</button>
+          </div>
+        </template>
+      </div>
+      <div class="mb-8 flex justify-center gap-4">
+        <button @click="foodwebCheck()" :disabled="foodweb.checked" class="min-h-16 rounded-xl bg-sky-600 px-10 text-2xl font-bold hover:bg-sky-500 disabled:opacity-40">Check Order</button>
+      </div>
+      <p x-show="foodweb.checked" class="mb-6 text-center text-2xl font-bold" :class="foodweb.correct ? 'text-emerald-400' : 'text-amber-400'" x-text="foodweb.feedback"></p>
+      <div x-show="foodweb.checked" class="mx-auto mb-8 max-w-2xl rounded-2xl border-2 border-emerald-500/50 bg-slate-800 p-6">
+        <template x-for="(org, i) in foodweb.correctOrder" :key="org.name">
+          <p class="text-xl text-slate-300"><span class="font-bold text-emerald-400" x-text="foodweb.roles[i] + ':'"></span> <span x-text="org.name"></span></p>
+        </template>
+      </div>
+      <div class="flex justify-center">
+        <button @click="foodwebNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 18: HISTORICAL TIMELINE ─── -->
+    <section x-show="currentView === 'timeline'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Historical Timeline Order</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Arrange these Australian events in chronological order (earliest first).</p>
+      <div class="mx-auto mb-8 max-w-2xl space-y-3">
+        <template x-for="(idx, pos) in timeline.order" :key="timeline.events[idx].event">
+          <div class="flex items-center gap-4 rounded-xl border-2 border-slate-600 bg-slate-800 p-5">
+            <span class="text-2xl font-bold text-amber-400" x-text="(pos + 1) + '.'"></span>
+            <span class="flex-1 text-xl font-bold sm:text-2xl" x-text="timeline.events[idx].event"></span>
+            <button @click="timelineMove(pos, -1)" :disabled="pos === 0" class="min-h-12 min-w-12 rounded-lg bg-slate-600 text-2xl font-bold hover:bg-slate-500 disabled:opacity-30">↑</button>
+            <button @click="timelineMove(pos, 1)" :disabled="pos === 3" class="min-h-12 min-w-12 rounded-lg bg-slate-600 text-2xl font-bold hover:bg-slate-500 disabled:opacity-30">↓</button>
+          </div>
+        </template>
+      </div>
+      <div class="mb-8 flex flex-wrap justify-center gap-4">
+        <button @click="timelineCheck()" :disabled="timeline.checked" class="min-h-16 rounded-xl bg-sky-600 px-10 text-2xl font-bold hover:bg-sky-500 disabled:opacity-40">Check Order</button>
+        <button @click="timeline.revealed = true" :disabled="timeline.revealed" class="min-h-16 rounded-xl bg-emerald-600 px-10 text-2xl font-bold hover:bg-emerald-500 disabled:opacity-40">Reveal Dates &amp; Context</button>
+      </div>
+      <p x-show="timeline.checked" class="mb-6 text-center text-2xl font-bold" :class="timeline.correct ? 'text-emerald-400' : 'text-amber-400'" x-text="timeline.feedback"></p>
+      <div x-show="timeline.revealed" x-transition class="mx-auto mb-8 max-w-2xl space-y-4 rounded-2xl border-2 border-amber-500/50 bg-slate-800 p-8">
+        <template x-for="ev in timeline.sortedEvents" :key="ev.event">
+          <div class="border-b border-slate-600 pb-4 last:border-0">
+            <p class="text-2xl font-bold text-amber-400" x-text="ev.year + ' — ' + ev.event"></p>
+            <p class="mt-1 text-lg text-slate-300" x-text="ev.context"></p>
+          </div>
+        </template>
+      </div>
+      <div class="flex justify-center">
+        <button @click="timelineNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 19: MAP SKILLS ─── -->
+    <section x-show="currentView === 'maps'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Map Skills &amp; Coordinates</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Use the grid map to answer the geography question.</p>
+      <div class="relative mx-auto mb-8 max-w-3xl">
+        <canvas x-ref="mapCanvas" class="mx-auto block w-full max-w-3xl rounded-2xl border-2 border-slate-600 bg-slate-900"></canvas>
+      </div>
+      <p class="mb-6 text-center text-2xl font-bold text-sky-400" x-text="maps.question"></p>
+      <div class="mx-auto mb-8 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <template x-for="(opt, idx) in maps.options" :key="opt">
+          <button @click="mapsGuess(idx)" :disabled="maps.answered"
+            class="min-h-16 rounded-xl border-2 px-6 text-xl font-bold transition-colors sm:text-2xl"
+            :class="mapsOptionClass(idx)">
+            <span x-text="opt"></span>
+          </button>
+        </template>
+      </div>
+      <div class="flex justify-center">
+        <button @click="mapsNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 20: PRIMARY VS SECONDARY SOURCE ─── -->
+    <section x-show="currentView === 'source'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Source Evaluation</h2>
+      <p class="mb-2 text-center text-2xl text-slate-300" x-text="source.modeLabel"></p>
+      <p class="mb-6 text-center text-xl text-slate-400">Victorian HASS — evaluate the source below.</p>
+      <div class="mx-auto mb-8 max-w-3xl rounded-2xl border-4 border-teal-500 bg-slate-800 p-10 text-center">
+        <p class="text-2xl leading-relaxed text-teal-100 sm:text-3xl" x-text="source.text"></p>
+      </div>
+      <div class="mx-auto mb-8 flex max-w-2xl flex-col gap-4 sm:flex-row sm:justify-center">
+        <button @click="sourceVote('A')" :disabled="source.answered"
+          class="min-h-20 flex-1 rounded-xl border-4 px-8 text-2xl font-bold transition-colors"
+          :class="sourceButtonClass('A')">
+          <span x-text="source.optionA"></span>
+        </button>
+        <button @click="sourceVote('B')" :disabled="source.answered"
+          class="min-h-20 flex-1 rounded-xl border-4 px-8 text-2xl font-bold transition-colors"
+          :class="sourceButtonClass('B')">
+          <span x-text="source.optionB"></span>
+        </button>
+      </div>
+      <div x-show="source.answered" x-transition class="mx-auto mb-8 max-w-2xl rounded-2xl border-2 p-8 text-center"
+        :class="source.correct ? 'border-emerald-500 bg-emerald-900/40' : 'border-amber-500 bg-amber-900/40'">
+        <p class="text-3xl font-bold" :class="source.correct ? 'text-emerald-400' : 'text-amber-400'" x-text="source.feedback"></p>
+        <p class="mt-4 text-xl text-slate-300" x-text="source.prompt"></p>
+      </div>
+      <div class="flex justify-center">
+        <button @click="sourceNewGame()" class="min-h-16 rounded-xl bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">New Game / Regenerate</button>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -554,6 +1087,93 @@
     function pickN(arr, n) {
       const copy = shuffle([...arr]);
       return copy.slice(0, Math.min(n, copy.length));
+    }
+
+    /* ─────────────────────────────────────────────
+       CONTENT BANK ENGINE — Anti-Repetition & Sub-Sampling
+    ───────────────────────────────────────────── */
+    const CONTENT_BANK_STORAGE_KEY = 'classroomStartersContentBank';
+    const BANK_MIN_UNIQUE_BEFORE_REUSE = 15;
+    const BANK_RECENT_GAMES_TO_TRACK = 3;
+
+    function loadContentBankState() {
+      try {
+        return JSON.parse(sessionStorage.getItem(CONTENT_BANK_STORAGE_KEY) || '{}');
+      } catch {
+        return {};
+      }
+    }
+
+    function saveContentBankState(state) {
+      try {
+        sessionStorage.setItem(CONTENT_BANK_STORAGE_KEY, JSON.stringify(state));
+      } catch { /* sessionStorage unavailable */ }
+    }
+
+    function getBankRecord(bankId) {
+      const all = loadContentBankState();
+      if (!all[bankId]) {
+        all[bankId] = { played: [], recentGames: [] };
+      }
+      return all[bankId];
+    }
+
+    function getRecentBankIds(bankId) {
+      const record = getBankRecord(bankId);
+      return new Set(record.recentGames.flat());
+    }
+
+    function recordBankSelection(bankId, selectedIds) {
+      const all = loadContentBankState();
+      const record = getBankRecord(bankId);
+      selectedIds.forEach((id) => {
+        if (!record.played.includes(id)) record.played.push(id);
+      });
+      record.recentGames = [selectedIds, ...record.recentGames].slice(0, BANK_RECENT_GAMES_TO_TRACK);
+      all[bankId] = record;
+      saveContentBankState(all);
+    }
+
+    function selectFromContentBank(bankId, pool, count) {
+      const record = getBankRecord(bankId);
+      const recentIds = getRecentBankIds(bankId);
+      let eligible = [...pool];
+
+      if (record.played.length < BANK_MIN_UNIQUE_BEFORE_REUSE) {
+        const filtered = eligible.filter((item) => !recentIds.has(item.id));
+        if (filtered.length >= count) eligible = filtered;
+      }
+
+      if (eligible.length < count) {
+        const relaxed = pool.filter((item) => !recentIds.has(item.id));
+        if (relaxed.length >= count) eligible = relaxed;
+      }
+      if (eligible.length < count) eligible = [...pool];
+
+      const selected = pickN(eligible, count);
+      recordBankSelection(bankId, selected.map((item) => item.id));
+      return selected;
+    }
+
+    function sampleCategoryItems(category) {
+      const pool = category.pool || category.items || [];
+      return pickN(pool, 4);
+    }
+
+    function createBankConnectionsGame(bankId, pool) {
+      const picked = selectFromContentBank(bankId, pool, 4);
+      const categories = picked.map((cat, i) => ({
+        id: `${cat.id}-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 5)}`,
+        title: cat.title,
+        difficulty: cat.difficulty || ['easy', 'medium', 'hard', 'tricky'][i],
+        items: sampleCategoryItems(cat),
+      }));
+      const { tiles } = buildConnectionPuzzle(categories);
+      return { activeCategories: categories, tiles };
+    }
+
+    function selectSingleFromBank(bankId, pool) {
+      return selectFromContentBank(bankId, pool, 1)[0];
     }
 
     function uniquePush(set, value, list) {
@@ -1339,82 +1959,1023 @@
     }
 
     /* ─────────────────────────────────────────────
+       TERMLE, BALANCE, PATTERN, ESTIMATION GENERATORS
+    ───────────────────────────────────────────── */
+    const TERMLE_WORD_BANK = [
+      { id: 'termle-prime', word: 'PRIME', hint: 'A number with exactly two factors: 1 and itself.' },
+      { id: 'termle-angle', word: 'ANGLE', hint: 'Formed by two rays sharing a common endpoint.' },
+      { id: 'termle-graph', word: 'GRAPH', hint: 'A visual plot of data or a function.' },
+      { id: 'termle-ratio', word: 'RATIO', hint: 'A comparison of two quantities, e.g. 3:4.' },
+      { id: 'termle-array', word: 'ARRAY', hint: 'An ordered arrangement of objects in rows and columns.' },
+      { id: 'termle-slope', word: 'SLOPE', hint: 'Steepness of a line: rise over run.' },
+      { id: 'termle-point', word: 'POINT', hint: 'An exact location in space with no size.' },
+      { id: 'termle-range', word: 'RANGE', hint: 'The difference between the highest and lowest values.' },
+      { id: 'termle-chord', word: 'CHORD', hint: 'A line segment connecting two points on a circle.' },
+      { id: 'termle-sigma', word: 'SIGMA', hint: 'Greek letter Σ used for summation.' },
+      { id: 'termle-delta', word: 'DELTA', hint: 'Greek letter Δ often meaning change.' },
+      { id: 'termle-proof', word: 'PROOF', hint: 'A logical argument showing a statement is true.' },
+      { id: 'termle-plane', word: 'PLANE', hint: 'A flat 2D surface extending infinitely.' },
+      { id: 'termle-odds', word: 'ODDS', hint: 'The likelihood of an event occurring.' },
+      { id: 'termle-digit', word: 'DIGIT', hint: 'A single symbol used to write numbers (0–9).' },
+      { id: 'termle-chart', word: 'CHART', hint: 'A diagram displaying data visually.' },
+      { id: 'termle-edges', word: 'EDGES', hint: 'Line segments where faces of a shape meet.' },
+      { id: 'termle-axes', word: 'AXES', hint: 'Reference lines on a graph (x and y).' },
+      { id: 'termle-bases', word: 'BASES', hint: 'The bottom face of a 3D shape, or in powers.' },
+      { id: 'termle-cubes', word: 'CUBES', hint: '3D shapes with 6 square faces.' },
+      { id: 'termle-power', word: 'POWER', hint: 'Repeated multiplication, e.g. 2³.' },
+      { id: 'termle-logic', word: 'LOGIC', hint: 'Reasoning using valid rules of inference.' },
+      { id: 'termle-lines', word: 'LINES', hint: 'Straight paths extending infinitely in both directions.' },
+      { id: 'termle-modes', word: 'MODES', hint: 'The most frequently occurring value in a data set.' },
+      { id: 'termle-means', word: 'MEANS', hint: 'The average of a set of numbers.' },
+      { id: 'termle-roots', word: 'ROOTS', hint: 'Solutions to equations, or square roots.' },
+      { id: 'termle-units', word: 'UNITS', hint: 'Standard quantities used for measurement.' },
+      { id: 'termle-round', word: 'ROUND', hint: 'To approximate a number to a given place value.' },
+      { id: 'termle-curve', word: 'CURVE', hint: 'A smooth, bending line that is not straight.' },
+      { id: 'termle-cones', word: 'CONES', hint: '3D shapes with a circular base tapering to a point.' },
+      { id: 'termle-prism', word: 'PRISM', hint: 'A 3D shape with two identical parallel bases.' },
+      { id: 'termle-solid', word: 'SOLID', hint: 'A three-dimensional shape with volume.' },
+      { id: 'termle-shape', word: 'SHAPE', hint: 'A geometric form such as a circle or triangle.' },
+      { id: 'termle-table', word: 'TABLE', hint: 'An organized arrangement of rows and columns of data.' },
+      { id: 'termle-grids', word: 'GRIDS', hint: 'Networks of evenly spaced horizontal and vertical lines.' },
+      { id: 'termle-fracs', word: 'FRACS', hint: 'Parts of a whole — short for fractions.' },
+      { id: 'termle-terms', word: 'TERMS', hint: 'Individual parts of an algebraic expression.' },
+      { id: 'termle-index', word: 'INDEX', hint: 'The power to which a number is raised.' },
+      { id: 'termle-verts', word: 'VERTS', hint: 'Corner points where edges of a shape meet.' },
+      { id: 'termle-faces', word: 'FACES', hint: 'Flat surfaces on a 3D solid.' },
+      { id: 'termle-rhomb', word: 'RHOMB', hint: 'A quadrilateral with four equal sides.' },
+      { id: 'termle-scala', word: 'SCALA', hint: 'Relates to scale — drawing size vs real size.' },
+      { id: 'termle-total', word: 'TOTAL', hint: 'The sum of all parts combined.' },
+      { id: 'termle-value', word: 'VALUE', hint: 'The numerical amount something represents.' },
+      { id: 'termle-zero', word: 'ZEROS', hint: 'The digit 0 — placeholder in place value.' },
+    ];
+
+    const TERMLE_VALID = new Set(TERMLE_WORD_BANK.map(w => w.word));
+
+    function evaluateWordleGuess(secret, guess) {
+      const feedback = new Array(secret.length).fill('absent');
+      const secretUsed = new Array(secret.length).fill(false);
+      const g = guess.toUpperCase().split('');
+      const s = secret.toUpperCase().split('');
+      for (let i = 0; i < s.length; i++) {
+        if (g[i] === s[i]) { feedback[i] = 'correct'; secretUsed[i] = true; }
+      }
+      for (let i = 0; i < g.length; i++) {
+        if (feedback[i] === 'correct') continue;
+        const idx = s.findIndex((ch, j) => !secretUsed[j] && ch === g[i]);
+        if (idx >= 0) { feedback[i] = 'present'; secretUsed[idx] = true; }
+      }
+      return feedback;
+    }
+
+    function buildTermleRows(secret, guesses) {
+      const rows = [];
+      for (let i = 0; i < 6; i++) {
+        const guess = guesses[i] || '';
+        const feedback = guess.length === 5 ? evaluateWordleGuess(secret, guess) : [];
+        rows.push({
+          cells: Array.from({ length: 5 }, (_, j) => ({
+            char: guess[j] || '',
+            state: guess ? feedback[j] : '',
+          })),
+        });
+      }
+      return rows;
+    }
+
+    function generateTermleRound() {
+      const entry = selectSingleFromBank('termle', TERMLE_WORD_BANK);
+      return { secret: entry.word, hint: entry.hint };
+    }
+
+    function generateBalancePuzzle() {
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const circle = randInt(2, 5);
+        const star = circle * randInt(2, 4);
+        const leftStars = 2;
+        const rightStars = 1;
+        const leftCircles = 1;
+        const rightCircles = 3;
+        const total = leftStars * star + leftCircles * circle;
+        if (rightStars * star + rightCircles * circle !== total) continue;
+        const steps = [
+          `Remove ${leftCircles} circle(s) from both sides.`,
+          `Remove ${rightStars} star(s) from both sides.`,
+          `Now compare: ${leftStars - rightStars} star(s) on the left vs ${rightCircles - leftCircles} circle(s) on the right.`,
+          `Divide: each star weighs the same as ${(leftStars - rightStars) / (rightCircles - leftCircles)} circle(s).`,
+          `Since each circle = ${circle}, one star = ${star} units.`,
+        ];
+        const wrong = new Set([star]);
+        const choices = [star];
+        while (choices.length < 4) {
+          const w = star + randInt(-3, 3);
+          if (w > 0 && !wrong.has(w)) { wrong.add(w); choices.push(w); }
+        }
+        return {
+          starWeight: star, circleWeight: circle,
+          leftStars, leftCircles, rightStars, rightCircles,
+          leftTotal: total, rightTotal: total,
+          steps, choices: shuffle(choices),
+        };
+      }
+      return {
+        starWeight: 4, circleWeight: 2,
+        leftStars: 2, leftCircles: 1, rightStars: 1, rightCircles: 3,
+        leftTotal: 10, rightTotal: 10,
+        steps: ['Remove 1 circle from both sides.', 'Remove 1 star from both sides.', '1 star = 2 circles.', 'Star = 4 units.'],
+        choices: shuffle([4, 2, 6, 8]),
+      };
+    }
+
+    function generatePatternPuzzle() {
+      const type = randInt(0, 3);
+      let seq = [], answer, rule, typeLabel;
+
+      if (type === 0) {
+        const start = randInt(2, 12);
+        const diff = randInt(2, 8);
+        seq = Array.from({ length: 6 }, (_, i) => start + i * diff);
+        answer = seq[5];
+        rule = `Add ${diff} each time (arithmetic sequence).`;
+        typeLabel = 'Arithmetic / Linear';
+      } else if (type === 1) {
+        const start = randInt(2, 4);
+        const ratio = randInt(2, 3);
+        seq = Array.from({ length: 6 }, (_, i) => start * ratio ** i);
+        answer = seq[5];
+        rule = `Multiply by ${ratio} each time (geometric sequence).`;
+        typeLabel = 'Geometric';
+      } else if (type === 2) {
+        const offset = randInt(1, 5);
+        seq = Array.from({ length: 6 }, (_, i) => (i + 1) ** 2 + offset);
+        answer = seq[5];
+        rule = `Square the term position, then add ${offset}.`;
+        typeLabel = 'Quadratic / Square Shifts';
+      } else {
+        seq = [1, 1];
+        while (seq.length < 6) seq.push(seq[seq.length - 1] + seq[seq.length - 2]);
+        answer = seq[5];
+        rule = 'Each term is the sum of the two before it (Fibonacci-style).';
+        typeLabel = 'Fibonacci-style';
+      }
+
+      const display = seq.slice(0, 5).map(String).concat('?');
+      const wrong = new Set([answer]);
+      const choices = [answer];
+      while (choices.length < 4) {
+        const w = answer + randInt(-5, 5);
+        if (w > 0 && !wrong.has(w)) { wrong.add(w); choices.push(w); }
+      }
+      return { display, answer, rule, typeLabel, choices: shuffle(choices) };
+    }
+
+    const ESTIMATION_CANVAS_W = 720;
+    const ESTIMATION_CANVAS_H = 400;
+
+    function roundRectPath(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + width - r, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+      ctx.lineTo(x + width, y + height - r);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+      ctx.lineTo(x + r, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function generateNonOverlappingDots(count, bounds) {
+      const colors = ['#38bdf8', '#f472b6', '#4ade80', '#fbbf24', '#a78bfa', '#fb923c'];
+      const positions = [];
+      const maxAttempts = count * 80;
+      let attempts = 0;
+
+      while (positions.length < count && attempts < maxAttempts) {
+        attempts += 1;
+        const r = randInt(7, 11);
+        const x = bounds.x + r + Math.random() * (bounds.w - 2 * r);
+        const y = bounds.y + r + Math.random() * (bounds.h - 2 * r);
+        let overlap = false;
+        for (const p of positions) {
+          const dx = x - p.x;
+          const dy = y - p.y;
+          if (Math.hypot(dx, dy) < r + p.r + 3) {
+            overlap = true;
+            break;
+          }
+        }
+        if (!overlap) {
+          positions.push({
+            x, y, r,
+            color: colors[randInt(0, colors.length - 1)],
+          });
+        }
+      }
+      return positions;
+    }
+
+    function drawEstimationBarChart(ctx, w, h, bars) {
+      const marginX = 48;
+      const top = 36;
+      const bottomLabel = 44;
+      const barAreaH = h - top - bottomLabel;
+      const gap = 16;
+      const barW = (w - marginX * 2 - gap * 3) / 4;
+      const fills = ['#22d3ee', '#4ade80', '#38bdf8', '#a78bfa'];
+
+      bars.forEach((bar, i) => {
+        const x = marginX + i * (barW + gap);
+        const fillH = (bar.height / 100) * barAreaH;
+
+        roundRectPath(ctx, x, top, barW, barAreaH, 10);
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        if (fillH > 0) {
+          ctx.save();
+          roundRectPath(ctx, x, top, barW, barAreaH, 10);
+          ctx.clip();
+          ctx.fillStyle = fills[i % fills.length];
+          ctx.fillRect(x, top + barAreaH - fillH, barW, fillH);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 28px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(bar.label, x + barW / 2, top + barAreaH + 28);
+      });
+    }
+
+    function drawEstimationDotJar(ctx, w, h, dotPositions) {
+      const jarW = w * 0.52;
+      const jarH = h * 0.72;
+      const jarX = (w - jarW) / 2;
+      const jarY = h * 0.14;
+      const neckW = jarW * 0.38;
+      const neckH = 30;
+      const neckX = jarX + (jarW - neckW) / 2;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      roundRectPath(ctx, jarX, jarY + neckH, jarW, jarH - neckH, 24);
+      ctx.fill();
+
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(neckX, jarY, neckW, neckH);
+
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 4;
+      roundRectPath(ctx, jarX, jarY + neckH, jarW, jarH - neckH, 24);
+      ctx.stroke();
+      ctx.strokeRect(neckX, jarY, neckW, neckH);
+
+      dotPositions.forEach((dot) => {
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2);
+        ctx.fillStyle = dot.color;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '600 20px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('How many marbles are in the jar?', w / 2, h - 18);
+    }
+
+    function drawEstimationAngle(ctx, w, h, angleDeg) {
+      const cx = w * 0.42;
+      const cy = h * 0.62;
+      const lineLen = Math.min(w, h) * 0.34;
+      const angleRad = (angleDeg * Math.PI) / 180;
+      const endX = cx + lineLen * Math.cos(angleRad);
+      const endY = cy - lineLen * Math.sin(angleRad);
+
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 10;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + lineLen, cy);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      const arcR = 58;
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(cx, cy, arcR, 0, -angleRad, true);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '600 20px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Estimate the angle marked by the arc (in degrees)', w / 2, h - 18);
+    }
+
+    function drawEstimationCanvas(canvas, data) {
+      if (!canvas || !data) return;
+
+      const cssW = ESTIMATION_CANVAS_W;
+      const cssH = ESTIMATION_CANVAS_H;
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssW, cssH);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, cssW, cssH);
+
+      if (data.type === 'bar') {
+        drawEstimationBarChart(ctx, cssW, cssH, data.bars);
+      } else if (data.type === 'dots') {
+        drawEstimationDotJar(ctx, cssW, cssH, data.dotPositions);
+      } else if (data.type === 'angle') {
+        drawEstimationAngle(ctx, cssW, cssH, data.angleDeg);
+      }
+    }
+
+    function generateEstimationChallenge() {
+      const mode = randInt(0, 2);
+
+      if (mode === 0) {
+        const count = randInt(28, 72);
+        const bounds = { x: 198, y: 98, w: 324, h: 248 };
+        const dotPositions = generateNonOverlappingDots(count, bounds);
+        const r5lo = Math.max(0, Math.round(count * 0.95));
+        const r5hi = Math.round(count * 1.05);
+        const r10lo = Math.max(0, Math.round(count * 0.9));
+        const r10hi = Math.round(count * 1.1);
+        return {
+          type: 'dots',
+          question: 'Estimate how many dots are in the jar!',
+          answer: count,
+          answerDisplay: count + ' dots',
+          dotPositions,
+          bars: [],
+          angleDeg: 0,
+          range5: `${r5lo} – ${r5hi}`,
+          range10: `${r10lo} – ${r10hi}`,
+        };
+      }
+
+      if (mode === 1) {
+        const pct = randInt(25, 82);
+        const bars = [
+          { label: 'A', height: randInt(30, 70) },
+          { label: 'B', height: pct },
+          { label: 'C', height: randInt(40, 90) },
+          { label: 'D', height: randInt(20, 60) },
+        ];
+        const r5lo = Math.max(0, pct - 5);
+        const r5hi = Math.min(100, pct + 5);
+        const r10lo = Math.max(0, pct - 10);
+        const r10hi = Math.min(100, pct + 10);
+        return {
+          type: 'bar',
+          question: 'Look at bar B — estimate what percentage it is filled!',
+          answer: pct,
+          answerDisplay: pct + '%',
+          dotPositions: [],
+          bars,
+          angleDeg: 0,
+          range5: `${r5lo}% – ${r5hi}%`,
+          range10: `${r10lo}% – ${r10hi}%`,
+        };
+      }
+
+      const angleDeg = randInt(15, 165);
+      const r5lo = Math.max(0, angleDeg - 5);
+      const r5hi = Math.min(180, angleDeg + 5);
+      const r10lo = Math.max(0, angleDeg - 10);
+      const r10hi = Math.min(180, angleDeg + 10);
+      return {
+        type: 'angle',
+        question: 'Estimate the angle shown by the arc (in degrees)!',
+        answer: angleDeg,
+        answerDisplay: angleDeg + '°',
+        dotPositions: [],
+        bars: [],
+        angleDeg,
+        range5: `${r5lo}° – ${r5hi}°`,
+        range10: `${r10lo}° – ${r10hi}°`,
+      };
+    }
+
+    /* ─────────────────────────────────────────────
+       CROSS-CURRICULAR GENERATORS (Victorian Curriculum v2.0)
+    ───────────────────────────────────────────── */
+    function createStaticConnectionsGame(pool) {
+      return createBankConnectionsGame('static-connections', pool);
+    }
+
+    const LITERARY_CATEGORY_BANK = [
+      { id: 'lit-irregular-plurals', title: 'Irregular plurals', difficulty: 'easy', pool: ['Children', 'Teeth', 'Mice', 'People', 'Geese', 'Feet', 'Leaves', 'Oxen'] },
+      { id: 'lit-latin-light', title: 'Latin roots: light', difficulty: 'medium', pool: ['Luminous', 'Illuminate', 'Translucent', 'Lucid', 'Luminary', 'Elucidate', 'Lucifer', 'Illumine'] },
+      { id: 'lit-similes', title: 'Similes', difficulty: 'easy', pool: ['Brave as a lion', 'Quiet as a mouse', 'Sweet like honey', 'Fast as lightning', 'Cool as a cucumber', 'Busy as a bee', 'Strong as an ox', 'White as snow'] },
+      { id: 'lit-silent-letters', title: 'Silent letters', difficulty: 'medium', pool: ['Knight', 'Psychology', 'Receipt', 'Debt', 'Island', 'Wrist', 'Honest', 'Gnaw'] },
+      { id: 'lit-metaphors', title: 'Metaphors', difficulty: 'medium', pool: ['Time is money', 'Heart of stone', 'Ocean of tears', 'River of life', 'World is a stage', 'Life is a journey', 'Blanket of snow', 'Sea of faces'] },
+      { id: 'lit-greek-phon', title: "Greek root: phon = sound", difficulty: 'hard', pool: ['Telephone', 'Symphony', 'Microphone', 'Cacophony', 'Phonograph', 'Euphony', 'Saxophone', 'Homophone'] },
+      { id: 'lit-homophones', title: 'Homophones', difficulty: 'tricky', pool: ['Their / There', 'Weather / Whether', 'Flour / Flower', 'Bare / Bear', 'Break / Brake', 'Piece / Peace', 'Sea / See', 'Write / Right'] },
+      { id: 'lit-adverbs-ly', title: 'Adverbs ending -ly', difficulty: 'easy', pool: ['Quickly', 'Silently', 'Happily', 'Carefully', 'Loudly', 'Gently', 'Suddenly', 'Gracefully'] },
+      { id: 'lit-prefix-un', title: "Prefixes: un- = not", difficulty: 'easy', pool: ['Unhappy', 'Unfair', 'Unkind', 'Unsure', 'Unlock', 'Unwrap', 'Unhealthy', 'Unlucky'] },
+      { id: 'lit-synonyms-said', title: 'Synonyms for said', difficulty: 'medium', pool: ['Whispered', 'Shouted', 'Muttered', 'Exclaimed', 'Declared', 'Murmured', 'Announced', 'Replied'] },
+      { id: 'lit-onomatopoeia', title: 'Onomatopoeia', difficulty: 'easy', pool: ['Buzz', 'Crash', 'Sizzle', 'Pop', 'Hiss', 'Bang', 'Splash', 'Tick-tock'] },
+      { id: 'lit-persuasive', title: 'Persuasive techniques', difficulty: 'hard', pool: ['Rhetorical question', 'Emotive language', 'Repetition', 'Expert opinion', 'Statistics', 'Anecdote', 'Inclusive language', 'Call to action'] },
+      { id: 'lit-conjunctions', title: 'Conjunctions', difficulty: 'easy', pool: ['And', 'But', 'Or', 'Because', 'Although', 'While', 'Since', 'Unless'] },
+      { id: 'lit-prepositions', title: 'Prepositions', difficulty: 'easy', pool: ['Under', 'Between', 'Through', 'Against', 'Beneath', 'Beyond', 'Within', 'Across'] },
+      { id: 'lit-pronouns', title: 'Pronouns', difficulty: 'easy', pool: ['She', 'They', 'Himself', 'Ourselves', 'Whoever', 'Something', 'Nobody', 'Yours'] },
+      { id: 'lit-abstract-nouns', title: 'Abstract nouns', difficulty: 'medium', pool: ['Freedom', 'Courage', 'Wisdom', 'Justice', 'Hope', 'Curiosity', 'Patience', 'Honesty'] },
+      { id: 'lit-concrete-nouns', title: 'Concrete nouns', difficulty: 'easy', pool: ['Chair', 'River', 'Mountain', 'Pencil', 'Apple', 'Bridge', 'Window', 'Volcano'] },
+      { id: 'lit-compound-words', title: 'Compound words', difficulty: 'easy', pool: ['Sunflower', 'Basketball', 'Toothbrush', 'Rainbow', 'Firefly', 'Butterfly', 'Snowflake', 'Bookshop'] },
+      { id: 'lit-contractions', title: 'Contractions', difficulty: 'easy', pool: ["Don't", "Can't", "They're", "We've", "It's", "Won't", "Shouldn't", "I'm"] },
+      { id: 'lit-palindromes', title: 'Palindromes', difficulty: 'tricky', pool: ['Level', 'Radar', 'Civic', 'Kayak', 'Rotor', 'Refer', 'Madam', 'Noon'] },
+      { id: 'lit-greek-bio', title: "Greek root: bio = life", difficulty: 'medium', pool: ['Biology', 'Biography', 'Antibiotic', 'Symbiosis', 'Microbe', 'Biosphere', 'Autobiography', 'Amphibian'] },
+      { id: 'lit-latin-port', title: "Latin root: port = carry", difficulty: 'medium', pool: ['Transport', 'Export', 'Import', 'Portable', 'Porter', 'Deport', 'Report', 'Support'] },
+      { id: 'lit-hyperbole', title: 'Hyperbole examples', difficulty: 'medium', pool: ['A million times', 'Older than dirt', 'Hungry as a horse', 'Bag weighs a tonne', 'Waited forever', 'Died of embarrassment', 'Exploded with joy', 'Ran at light speed'] },
+      { id: 'lit-alliteration', title: 'Alliteration', difficulty: 'easy', pool: ['Sally sells seashells', 'Peter Piper picked', 'Big brown bear', 'Dancing dolphins', 'Snakes slither silently', 'Frogs flip fast', 'Lazy lions lounge', 'Wild wind whispers'] },
+      { id: 'lit-oxymorons', title: 'Oxymorons', difficulty: 'hard', pool: ['Deafening silence', 'Living dead', 'Seriously funny', 'Awfully good', 'Old news', 'Open secret', 'Pretty ugly', 'Alone together'] },
+      { id: 'lit-idioms', title: 'Common idioms', difficulty: 'medium', pool: ['Break the ice', 'Piece of cake', 'Hit the books', 'Under the weather', 'Spill the beans', 'Once in a blue moon', 'Bite the bullet', 'Cost an arm and a leg'] },
+      { id: 'lit-irregular-verbs', title: 'Irregular past tense', difficulty: 'medium', pool: ['Went', 'Bought', 'Taught', 'Caught', 'Flew', 'Grew', 'Swam', 'Began'] },
+      { id: 'lit-antonyms', title: 'Antonym pairs', difficulty: 'easy', pool: ['Hot / Cold', 'Light / Dark', 'Brave / Cowardly', 'Ancient / Modern', 'Victory / Defeat', 'Generous / Selfish', 'Expand / Shrink', 'Arrive / Depart'] },
+      { id: 'lit-prefix-re', title: "Prefixes: re- = again", difficulty: 'easy', pool: ['Rewrite', 'Rebuild', 'Return', 'Replay', 'Recycle', 'Rethink', 'Replace', 'Refresh'] },
+      { id: 'lit-suffix-ology', title: "Suffix: -ology = study of", difficulty: 'hard', pool: ['Geology', 'Biology', 'Psychology', 'Archaeology', 'Meteorology', 'Zoology', 'Anthropology', 'Ecology'] },
+    ];
+
+    const SCIENCE_CATEGORY_BANK = [
+      { id: 'sci-body-systems', title: 'Human Body Systems', difficulty: 'medium', pool: ['Digestive', 'Nervous', 'Circulatory', 'Respiratory', 'Excretory', 'Skeletal', 'Muscular', 'Endocrine'] },
+      { id: 'sci-states-matter', title: 'States of Matter', difficulty: 'easy', pool: ['Solid', 'Liquid', 'Gas', 'Plasma', 'Bose-Einstein Condensate', 'Vapour', 'Condensate', 'Crystalline'] },
+      { id: 'sci-earth-layers', title: 'Layers of the Earth', difficulty: 'medium', pool: ['Crust', 'Mantle', 'Outer Core', 'Inner Core', 'Lithosphere', 'Asthenosphere', 'Mesosphere', 'Core'] },
+      { id: 'sci-renewable-energy', title: 'Renewable Energy Sources', difficulty: 'medium', pool: ['Wind', 'Solar', 'Hydro', 'Geothermal', 'Biomass', 'Tidal', 'Wave', 'Hydrogen'] },
+      { id: 'sci-forces', title: 'Types of Forces', difficulty: 'easy', pool: ['Gravity', 'Friction', 'Magnetism', 'Tension', 'Buoyancy', 'Electrostatic', 'Air Resistance', 'Normal Force'] },
+      { id: 'sci-elements-symbols', title: 'Chemical Elements (Symbols)', difficulty: 'hard', pool: ['Gold/Au', 'Iron/Fe', 'Sodium/Na', 'Carbon/C', 'Oxygen/O', 'Helium/He', 'Nitrogen/N', 'Copper/Cu'] },
+      { id: 'sci-ecological-roles', title: 'Ecological Roles', difficulty: 'medium', pool: ['Producer', 'Primary Consumer', 'Decomposer', 'Apex Predator', 'Scavenger', 'Herbivore', 'Omnivore', 'Detritivore'] },
+      { id: 'sci-space', title: 'Space & Astronomy', difficulty: 'hard', pool: ['Nebula', 'Supernova', 'Asteroid', 'Comet', 'Light Year', 'Galaxy', 'Black Hole', 'Meteor'] },
+      { id: 'sci-plate-tectonics', title: 'Plate Tectonic Boundaries', difficulty: 'hard', pool: ['Convergent', 'Divergent', 'Transform', 'Subduction Zone', 'Collision Boundary', 'Rift Valley', 'Mid-Ocean Ridge', 'Fault Line'] },
+      { id: 'sci-vic-fauna', title: 'Victorian Native Fauna', difficulty: 'tricky', pool: ["Leadbeater's Possum", 'Platypus', 'Helmeted Honeyeater', 'Eastern Barred Bandicoot', 'Koala', 'Wombat', 'Echidna', 'Gang-gang Cockatoo'] },
+      { id: 'sci-organelles', title: 'Cell Organelles', difficulty: 'hard', pool: ['Nucleus', 'Mitochondria', 'Ribosome', 'Cell Membrane', 'Vacuole', 'Cytoplasm', 'Chloroplast', 'Golgi Body'] },
+      { id: 'sci-rock-types', title: 'Rock Types', difficulty: 'medium', pool: ['Igneous', 'Sedimentary', 'Metamorphic', 'Obsidian', 'Basalt', 'Limestone', 'Marble', 'Granite'] },
+      { id: 'sci-energy-forms', title: 'Forms of Energy', difficulty: 'medium', pool: ['Kinetic', 'Thermal', 'Chemical', 'Electrical', 'Nuclear', 'Sound', 'Elastic Potential', 'Gravitational'] },
+      { id: 'sci-units', title: 'Scientific Units', difficulty: 'hard', pool: ['Newton', 'Joule', 'Watt', 'Pascal', 'Volt', 'Hertz', 'Ampere', 'Kelvin'] },
+      { id: 'sci-lab-equipment', title: 'Lab Equipment', difficulty: 'easy', pool: ['Beaker', 'Bunsen Burner', 'Graduated Cylinder', 'Retort Stand', 'Pipette', 'Measuring Cylinder', 'Test Tube', 'Petri Dish'] },
+      { id: 'sci-water-cycle', title: 'Phases of Water / Water Cycle', difficulty: 'medium', pool: ['Evaporation', 'Condensation', 'Precipitation', 'Transpiration', 'Infiltration', 'Runoff', 'Collection', 'Sublimation'] },
+      { id: 'sci-acids-bases', title: 'Acids & Bases', difficulty: 'medium', pool: ['Hydrochloric Acid', 'Sodium Hydroxide', 'Vinegar', 'Lemon Juice', 'Baking Soda', 'Ammonia', 'Sulfuric Acid', 'Distilled Water'] },
+      { id: 'sci-symbiosis', title: 'Symbiotic Relationships', difficulty: 'hard', pool: ['Mutualism', 'Commensalism', 'Parasitism', 'Predation', 'Competition', 'Co-evolution', 'Nitrogen Fixation', 'Pollination'] },
+      { id: 'sci-atmosphere', title: 'Atmospheric Layers', difficulty: 'hard', pool: ['Troposphere', 'Stratosphere', 'Mesosphere', 'Thermosphere', 'Exosphere', 'Ozone Layer', 'Ionosphere', 'Tropopause'] },
+      { id: 'sci-em-spectrum', title: 'Electromagnetic Spectrum', difficulty: 'hard', pool: ['Radio', 'Microwave', 'Infrared', 'Visible Light', 'Ultraviolet', 'X-Ray', 'Gamma', 'UV Radiation'] },
+      { id: 'sci-plant-structures', title: 'Plant Structures', difficulty: 'medium', pool: ['Xylem', 'Phloem', 'Stomata', 'Chloroplast', 'Anther', 'Stigma', 'Epidermis', 'Root Hair'] },
+      { id: 'sci-taxonomy', title: 'Classification Taxa', difficulty: 'tricky', pool: ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Domain'] },
+      { id: 'sci-material-props', title: 'Properties of Materials', difficulty: 'medium', pool: ['Ductile', 'Malleable', 'Transparent', 'Conductive', 'Viscous', 'Elastic', 'Brittle', 'Magnetic'] },
+      { id: 'sci-genetics', title: 'Genetics Terms', difficulty: 'hard', pool: ['DNA', 'Chromosome', 'Allele', 'Dominant', 'Recessive', 'Mutation', 'Genotype', 'Phenotype'] },
+      { id: 'sci-wave-types', title: 'Types of Waves', difficulty: 'medium', pool: ['Transverse', 'Longitudinal', 'Sound Wave', 'Seismic Wave', 'Radio Wave', 'Surface Wave', 'Mechanical Wave', 'Electromagnetic Wave'] },
+      { id: 'sci-simple-machines', title: 'Simple Machines', difficulty: 'easy', pool: ['Lever', 'Pulley', 'Inclined Plane', 'Wheel & Axle', 'Wedge', 'Screw', 'Gear', 'Fulcrum'] },
+      { id: 'sci-aus-ecosystems', title: 'Australian Ecosystems', difficulty: 'tricky', pool: ['Mallee', 'Rainforest', 'Coral Reef', 'Alpine', 'Wetlands', 'Desert', 'Grassland', 'Mangrove'] },
+      { id: 'sci-adaptations', title: 'Animal Adaptations', difficulty: 'medium', pool: ['Camouflage', 'Migration', 'Hibernation', 'Echolocation', 'Venom', 'Blubber', 'Webbed Feet', 'Sharp Talons'] },
+      { id: 'sci-weather', title: 'Weather Instruments', difficulty: 'easy', pool: ['Barometer', 'Thermometer', 'Anemometer', 'Rain Gauge', 'Hygrometer', 'Weather Vane', 'Ceilometer', 'Hygrograph'] },
+      { id: 'sci-moon-phases', title: 'Moon Phases', difficulty: 'easy', pool: ['New Moon', 'Crescent', 'First Quarter', 'Gibbous', 'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent'] },
+    ];
+
+    const TIMELINE_EVENT_BANK = [
+      { id: 'tl-first-fleet', event: 'First Fleet arrives in Sydney Cove', year: 1788, context: 'British colonisation of Australia begins with the arrival of the First Fleet.' },
+      { id: 'tl-eureka', event: 'Eureka Stockade rebellion', year: 1854, context: 'Gold miners in Ballarat protested against mining licences and government corruption.' },
+      { id: 'tl-federation', event: 'Australian Federation', year: 1901, context: 'The six colonies united to form the Commonwealth of Australia.' },
+      { id: 'tl-gallipoli', event: 'Gallipoli ANZAC landing', year: 1915, context: 'Australian and New Zealand troops landed at Gallipoli during World War I.' },
+      { id: 'tl-aboriginal-flag', event: 'Aboriginal flag first flown', year: 1971, context: 'Designed by Harold Thomas, it became a symbol of Aboriginal identity and pride.' },
+      { id: 'tl-apology', event: 'Apology to the Stolen Generations', year: 2008, context: 'Prime Minister Kevin Rudd formally apologised in Federal Parliament.' },
+      { id: 'tl-womens-vote', event: "Women gain federal voting rights", year: 1902, context: 'Australia was among the first nations to grant women federal voting rights.' },
+      { id: 'tl-harbour-bridge', event: 'Sydney Harbour Bridge opens', year: 1932, context: 'An iconic engineering landmark connecting northern and southern Sydney.' },
+      { id: 'tl-cook-arrival', event: "Cook's voyage charts eastern Australia", year: 1770, context: "Captain James Cook mapped the east coast for Britain." },
+      { id: 'tl-gold-rush', event: 'Victorian Gold Rush begins', year: 1851, context: 'Gold discoveries near Ballarat and Bendigo transformed Victoria.' },
+      { id: 'tl-ww1-end', event: 'Armistice ends World War I', year: 1918, context: 'Australia suffered heavy casualties across the Western Front and Gallipoli.' },
+      { id: 'tl-menzies', event: 'Menzies becomes Prime Minister (2nd term)', year: 1949, context: 'Robert Menzies began a record 16-year period as PM.' },
+      { id: 'tl-olympics', event: 'Melbourne hosts Olympic Games', year: 1956, context: 'First Olympics held in the Southern Hemisphere.' },
+      { id: 'tl-referendum', event: '1967 Constitutional Referendum', year: 1967, context: 'Australians voted to count Aboriginal people in the census.' },
+      { id: 'tl-whitlam', event: 'Whitlam government dismissed', year: 1975, context: 'Governor-General Sir John Kerr dismissed the Whitlam government.' },
+      { id: 'tl-anzus', event: 'ANZUS Treaty signed', year: 1951, context: 'Australia, New Zealand and the USA formed a security alliance.' },
+      { id: 'tl-mabo', event: 'Mabo High Court decision', year: 1992, context: 'Native title recognised, overturning terra nullius.' },
+      { id: 'tl-911-response', event: 'Australia commits troops to Afghanistan', year: 2001, context: 'Following the September 11 attacks, Australia joined the war in Afghanistan.' },
+      { id: 'tl-ndis', event: 'NDIS legislation passes', year: 2013, context: 'National Disability Insurance Scheme established.' },
+      { id: 'tl-baudin', event: 'Baudin expedition maps southern coast', year: 1802, context: 'French expedition charted much of southern Australia.' },
+      { id: 'tl-burke-wills', event: 'Burke and Wills expedition', year: 1860, context: 'First European expedition to cross Australia south to north.' },
+      { id: 'tl-suffrage-vic', event: 'Victorian women gain vote', year: 1908, context: 'Victoria was the last Australian state to grant women voting rights.' },
+      { id: 'tl-anzac-day', event: 'First ANZAC Day commemorated', year: 1916, context: 'A day of remembrance for those who served and died.' },
+      { id: 'tl-empire-games', event: 'British Empire Games in Sydney', year: 1938, context: 'Precursor to the Commonwealth Games held in Sydney.' },
+      { id: 'tl-terra-nullius', event: 'Terra nullius doctrine applied', year: 1788, context: 'British law treated Australia as unoccupied land — later overturned by Mabo.' },
+      { id: 'tl-vietnam', event: 'Australia sends advisors to Vietnam', year: 1962, context: 'Beginning of Australian military involvement in the Vietnam War.' },
+      { id: 'tl-republic-referendum', event: 'Republic referendum defeated', year: 1999, context: 'Australians voted to retain the constitutional monarchy.' },
+      { id: 'tl-captain-flinders', event: 'Flinders circumnavigates Australia', year: 1803, context: 'Matthew Flinders proved Australia was a single continent.' },
+      { id: 'tl-immigration-act', event: 'White Australia Policy enacted', year: 1901, context: 'Restrictive immigration policy — gradually dismantled from 1949.' },
+      { id: 'tl-snowy-scheme', event: 'Snowy Mountains Scheme begins', year: 1949, context: 'Massive hydroelectric and irrigation project employing many migrants.' },
+    ];
+
+    // Legacy aliases for backward compatibility
+    const LITERARY_CATEGORIES = LITERARY_CATEGORY_BANK;
+    const SCIENCE_CATEGORIES = SCIENCE_CATEGORY_BANK;
+    const TIMELINE_EVENTS = TIMELINE_EVENT_BANK;
+
+    function shuffledOrder(n) {
+      const order = Array.from({ length: n }, (_, i) => i);
+      let result = shuffle(order);
+      let guard = 0;
+      while (result.every((v, i) => v === i) && guard < 20) {
+        result = shuffle(order);
+        guard++;
+      }
+      return result;
+    }
+
+    const RHETORIC_QUOTES = [
+      { quote: 'The wind whispered through the ancient pines.', device: 'Personification', hint: 'Giving human qualities to non-human things.', definition: 'Personification attributes human actions or feelings to objects or nature.' },
+      { quote: 'Peter Piper picked a peck of pickled peppers.', device: 'Alliteration', hint: 'Repeated starting consonant sounds.', definition: 'Alliteration repeats the same initial consonant sound in nearby words.' },
+      { quote: 'I have told you a million times!', device: 'Hyperbole', hint: 'Extreme exaggeration for effect.', definition: 'Hyperbole uses deliberate exaggeration that is not meant literally.' },
+      { quote: 'The bees buzzed and the clock ticked.', device: 'Onomatopoeia', hint: 'Words that imitate sounds.', definition: 'Onomatopoeia uses words that phonetically resemble the sounds they describe.' },
+      { quote: 'It was a deafening silence in the room.', device: 'Oxymoron', hint: 'Two opposite ideas placed together.', definition: 'An oxymoron combines contradictory terms to create a striking effect.' },
+      { quote: 'Her smile was sunshine on a rainy day.', device: 'Metaphor', hint: 'A direct comparison without like or as.', definition: 'A metaphor states one thing is another to show a shared quality.' },
+      { quote: 'The classroom was a zoo after lunch.', device: 'Metaphor', hint: 'Comparing two unlike things directly.', definition: 'Metaphor compares two unlike things without using like or as.' },
+      { quote: 'The thunder grumbled angrily overhead.', device: 'Personification', hint: 'Nature given human emotion.', definition: 'Personification gives human emotions or actions to non-human things.' },
+    ];
+
+    const ETYMOLOGY_ROOTS = [
+      { root: 'CHRON', meaning: 'time', correct: ['Chronological', 'Synchronize'], words: [
+        { text: 'Chronological', correct: true, breakdown: 'Chron (time) + logical → in time order' },
+        { text: 'Spectator', correct: false, breakdown: 'Spect (look) — not related to time' },
+        { text: 'Synchronize', correct: true, breakdown: 'Syn (together) + chron (time) → at the same time' },
+        { text: 'Geography', correct: false, breakdown: 'Geo (earth) + graph (write) — about places' },
+      ]},
+      { root: 'GEO', meaning: 'earth', correct: ['Geography', 'Geology'], words: [
+        { text: 'Geography', correct: true, breakdown: 'Geo (earth) + graph (write) → describing Earth' },
+        { text: 'Chronicle', correct: false, breakdown: 'Chron (time) — a record of events' },
+        { text: 'Geology', correct: true, breakdown: 'Geo (earth) + logy (study) → study of Earth' },
+        { text: 'Spectacle', correct: false, breakdown: 'Spect (look) — something impressive to see' },
+      ]},
+      { root: 'SPECT', meaning: 'look / see', correct: ['Spectator', 'Spectacle'], words: [
+        { text: 'Spectator', correct: true, breakdown: 'Spect (look) + ator (one who) → one who watches' },
+        { text: 'Chronometer', correct: false, breakdown: 'Chron (time) — a precise timekeeper' },
+        { text: 'Spectacle', correct: true, breakdown: 'Spect (look) + acle → something worth seeing' },
+        { text: 'Geothermal', correct: false, breakdown: 'Geo (earth) + thermal (heat)' },
+      ]},
+      { root: 'GRAPH', meaning: 'write / draw', correct: ['Autograph', 'Biography'], words: [
+        { text: 'Autograph', correct: true, breakdown: 'Auto (self) + graph (write) → self-written signature' },
+        { text: 'Telephone', correct: false, breakdown: 'Tele (far) + phone (sound)' },
+        { text: 'Biography', correct: true, breakdown: 'Bio (life) + graph (write) → written life story' },
+        { text: 'Thermometer', correct: false, breakdown: 'Thermo (heat) + meter (measure)' },
+      ]},
+      { root: 'BIO', meaning: 'life', correct: ['Biology', 'Biography'], words: [
+        { text: 'Biology', correct: true, breakdown: 'Bio (life) + logy (study) → study of living things' },
+        { text: 'Geology', correct: false, breakdown: 'Geo (earth) — study of rocks' },
+        { text: 'Biography', correct: true, breakdown: 'Bio (life) + graph (write) → life story' },
+        { text: 'Chronology', correct: false, breakdown: 'Chron (time) — timeline of events' },
+      ]},
+    ];
+
+    const VARIABLE_SCENARIOS = [
+      { scenario: 'Mia tests whether plant growth changes when using salt water instead of fresh water. She keeps the same type of plant, pot size, and sunlight for each trial.', iv: 'Type of water (salt vs fresh)', dv: 'Plant growth (height)', controlled: ['Same plant species', 'Same pot size', 'Same sunlight'] },
+      { scenario: 'Jay measures how far a toy car travels when launched from different ramp heights. He uses the same car and surface each time.', iv: 'Ramp height', dv: 'Distance the car travels', controlled: ['Same toy car', 'Same surface', 'Same launch method'] },
+      { scenario: 'A class investigates whether bean seeds germinate faster in warm or cool cupboards. They use identical seeds and equal water.', iv: 'Cupboard temperature', dv: 'Germination speed', controlled: ['Same seed type', 'Equal water', 'Same containers'] },
+      { scenario: 'Sam tests which brand of paper towel absorbs the most water. He uses the same amount of water and identical beakers.', iv: 'Paper towel brand', dv: 'Amount of water absorbed', controlled: ['Same water volume', 'Same beakers', 'Same testing method'] },
+    ];
+
+    const CLASSIFIER_THEMES = [
+      {
+        id: 'physical-chemical',
+        instruction: 'Sort each change as Physical or Chemical.',
+        labelA: 'Physical Change',
+        labelB: 'Chemical Change',
+        poolA: ['Crushing a can', 'Melting ice', 'Dissolving sugar', 'Boiling water', 'Shredding paper', 'Chopping wood', 'Freezing juice', 'Breaking glass', 'Condensing steam', 'Bending wire'],
+        poolB: ['Rusting iron', 'Baking a cake', 'Burning wood', 'Digesting food', 'Fireworks exploding', 'Milk turning sour', 'Cooking an egg', 'Rotting fruit', 'Vinegar and baking soda reaction', 'Bleaching hair'],
+      },
+      {
+        id: 'living-nonliving',
+        instruction: 'Classify each item as Living or Non-Living.',
+        labelA: 'Living',
+        labelB: 'Non-Living',
+        poolA: ['Eucalyptus tree', 'Magpie', 'Bacteria', 'Mushroom', 'Earthworm', 'Kangaroo', 'Algae', 'Moss'],
+        poolB: ['Granite rock', 'River water', 'Oxygen gas', 'Sunlight', 'Plastic bottle', 'Cloud', 'Salt crystal', 'Sand'],
+      },
+      {
+        id: 'renewable-energy',
+        instruction: 'Sort each energy source as Renewable or Non-Renewable.',
+        labelA: 'Renewable Energy',
+        labelB: 'Non-Renewable Energy',
+        poolA: ['Solar power', 'Wind turbines', 'Hydroelectric dam', 'Geothermal heat', 'Biomass energy', 'Wave power'],
+        poolB: ['Coal plant', 'Crude oil', 'Natural gas', 'Uranium nuclear fuel', 'Diesel fuel', 'Petrol engine'],
+      },
+      {
+        id: 'conductors-insulators',
+        instruction: 'Classify each material as a Conductor or Insulator.',
+        labelA: 'Conductor',
+        labelB: 'Insulator',
+        poolA: ['Copper wire', 'Iron nail', 'Aluminium foil', 'Saltwater', 'Gold ring', 'Graphite pencil lead'],
+        poolB: ['Rubber tire', 'Plastic ruler', 'Wooden spoon', 'Glass bottle', 'Pure wool', 'Dry air'],
+      },
+      {
+        id: 'metals-nonmetals',
+        instruction: 'Sort each element as a Metal or Non-Metal.',
+        labelA: 'Metal',
+        labelB: 'Non-Metal',
+        poolA: ['Gold (Au)', 'Iron (Fe)', 'Copper (Cu)', 'Aluminium (Al)', 'Silver (Ag)', 'Magnesium (Mg)'],
+        poolB: ['Carbon (C)', 'Oxygen (O)', 'Helium (He)', 'Sulfur (S)', 'Nitrogen (N)', 'Chlorine (Cl)'],
+      },
+      {
+        id: 'contact-forces',
+        instruction: 'Classify each force as Contact or Non-Contact.',
+        labelA: 'Contact Force',
+        labelB: 'Non-Contact Force',
+        poolA: ['Friction on tires', 'Air resistance on parachute', 'Tension in rope', 'Normal kick force', 'Buoyancy in water'],
+        poolB: ['Gravity pulling an apple', 'Magnetic attraction', 'Electrostatic hair cling', "Earth's magnetic field"],
+      },
+      {
+        id: 'acids-bases',
+        instruction: 'Sort each substance as an Acid or Base / Alkali.',
+        labelA: 'Acid',
+        labelB: 'Base / Alkali',
+        poolA: ['Lemon juice', 'Vinegar', 'Battery acid', 'Stomach acid', 'Coffee', 'Tomatoes'],
+        poolB: ['Soap', 'Bleach', 'Baking soda', 'Toothpaste', 'Ammonia cleaner', 'Drain cleaner'],
+      },
+      {
+        id: 'herbivores-carnivores',
+        instruction: 'Classify each animal as a Primary Consumer (Herbivore) or Secondary Consumer (Carnivore).',
+        labelA: 'Primary Consumer (Herbivore)',
+        labelB: 'Secondary Consumer (Carnivore)',
+        poolA: ['Koala', 'Possum', 'Caterpillar', 'Grasshopper', 'Wallaby', 'Rabbit'],
+        poolB: ['Wedge-tailed eagle', 'Dingo', 'Kookaburra', 'Blue-tongued lizard', 'Tiger snake'],
+      },
+    ];
+
+    let classifierLastThemeId = null;
+
+    function pickClassifierTheme() {
+      let theme;
+      let attempts = 0;
+      do {
+        theme = CLASSIFIER_THEMES[randInt(0, CLASSIFIER_THEMES.length - 1)];
+        attempts += 1;
+      } while (theme.id === classifierLastThemeId && CLASSIFIER_THEMES.length > 1 && attempts < 20);
+      classifierLastThemeId = theme.id;
+      return theme;
+    }
+
+    function generateClassifierRound() {
+      const theme = pickClassifierTheme();
+      const itemsA = pickN(theme.poolA, 3).map((text) => ({ text, answer: 'A', bucket: null }));
+      const itemsB = pickN(theme.poolB, 3).map((text) => ({ text, answer: 'B', bucket: null }));
+      const items = shuffle([...itemsA, ...itemsB]);
+
+      return {
+        instruction: theme.instruction,
+        labelA: theme.labelA,
+        labelB: theme.labelB,
+        themeId: theme.id,
+        items,
+        selectedItem: null,
+        done: false,
+        allCorrect: false,
+        feedback: '',
+        checked: false,
+        mistakes: 0,
+      };
+    }
+
+    const FOOD_WEBS = [
+      { organisms: [
+        { name: 'Eucalyptus leaf', role: 0 }, { name: 'Grasshopper', role: 1 },
+        { name: 'Blue-tongued lizard', role: 2 }, { name: 'Wedge-tailed eagle', role: 3 },
+      ], roles: ['Producer', 'Primary Consumer', 'Secondary Consumer', 'Apex Predator'] },
+      { organisms: [
+        { name: 'Seagrass', role: 0 }, { name: 'Sea urchin', role: 1 },
+        { name: 'Snapper fish', role: 2 }, { name: 'Great white shark', role: 3 },
+      ], roles: ['Producer', 'Primary Consumer', 'Secondary Consumer', 'Apex Predator'] },
+      { organisms: [
+        { name: 'Acacia leaves', role: 0 }, { name: 'Kangaroo', role: 1 },
+        { name: 'Dingo', role: 2 }, { name: 'Saltwater crocodile', role: 3 },
+      ], roles: ['Producer', 'Primary Consumer', 'Secondary Consumer', 'Apex Predator'] },
+    ];
+
+    const MAP_FEATURES = [
+      { name: 'Mountain', symbol: '▲', color: '#94a3b8' },
+      { name: 'River', symbol: '≈', color: '#38bdf8' },
+      { name: 'Town', symbol: '●', color: '#fbbf24' },
+      { name: 'Forest', symbol: '♣', color: '#4ade80' },
+      { name: 'Lake', symbol: '◉', color: '#22d3ee' },
+    ];
+
+    const MAP_CANVAS_W = 600;
+    const MAP_CANVAS_H = 520;
+    const MAP_COLS = ['A', 'B', 'C', 'D', 'E'];
+    const MAP_ROWS = [1, 2, 3, 4, 5];
+
+    function cellToXY(col, row) {
+      const cellW = 90;
+      const cellH = 80;
+      const originX = 70;
+      const originY = 50;
+      const ci = MAP_COLS.indexOf(col);
+      const ri = MAP_ROWS.indexOf(row);
+      return { x: originX + ci * cellW + cellW / 2, y: originY + ri * cellH + cellH / 2, cellW, cellH, originX, originY, ci, ri };
+    }
+
+    function drawMapCanvas(canvas, data) {
+      if (!canvas || !data) return;
+      const cssW = MAP_CANVAS_W;
+      const cssH = MAP_CANVAS_H;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, cssW, cssH);
+
+      const cellW = 90;
+      const cellH = 80;
+      const originX = 70;
+      const originY = 50;
+
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      for (let c = 0; c < 5; c++) {
+        for (let r = 0; r < 5; r++) {
+          ctx.strokeRect(originX + c * cellW, originY + r * cellH, cellW, cellH);
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(originX + c * cellW + 1, originY + r * cellH + 1, cellW - 2, cellH - 2);
+        }
+      }
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      for (let c = 0; c < 5; c++) {
+        ctx.fillText(MAP_COLS[c], originX + c * cellW + cellW / 2, originY - 12);
+      }
+      ctx.textAlign = 'right';
+      for (let r = 0; r < 5; r++) {
+        ctx.fillText(String(MAP_ROWS[r]), originX - 12, originY + r * cellH + cellH / 2 + 6);
+      }
+
+      data.placements.forEach((p) => {
+        const pos = cellToXY(p.col, p.row);
+        ctx.fillStyle = p.color;
+        ctx.font = 'bold 28px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.symbol, pos.x, pos.y);
+        ctx.font = '12px system-ui, sans-serif';
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(p.name, pos.x, pos.y + 22);
+      });
+
+      const cx = cssW - 55;
+      const cy = cssH - 55;
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy - 30);
+      ctx.stroke();
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 16px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('N', cx, cy - 38);
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.fillText('W', cx - 18, cy + 5);
+      ctx.fillText('E', cx + 18, cy + 5);
+      ctx.fillText('S', cx, cy + 20);
+    }
+
+    function generateMapChallenge() {
+      const placements = [];
+      const used = new Set();
+      const count = 4;
+      while (placements.length < count) {
+        const col = MAP_COLS[randInt(0, 4)];
+        const row = MAP_ROWS[randInt(0, 4)];
+        const key = col + row;
+        if (used.has(key)) continue;
+        used.add(key);
+        const feat = MAP_FEATURES[placements.length];
+        placements.push({ ...feat, col, row });
+      }
+
+      const target = placements[randInt(0, placements.length - 1)];
+      const targetPos = cellToXY(target.col, target.row);
+      const others = placements.filter(p => p.name !== target.name);
+      const ref = others[randInt(0, others.length - 1)];
+      const refPos = cellToXY(ref.col, ref.row);
+
+      const directions = ['North', 'South', 'East', 'West', 'North-East', 'North-West', 'South-East', 'South-West'];
+      let question = '';
+      let answer = '';
+      const dx = targetPos.ci - refPos.ci;
+      const dy = targetPos.ri - refPos.ri;
+
+      if (Math.abs(dx) >= 1 && Math.abs(dy) >= 1) {
+        const ns = dy < 0 ? 'North' : 'South';
+        const ew = dx > 0 ? 'East' : 'West';
+        answer = `${ns}-${ew}`;
+        question = `Which direction is the ${target.name} from the ${ref.name} at ${ref.col}${ref.row}?`;
+      } else if (Math.abs(dx) > Math.abs(dy)) {
+        answer = dx > 0 ? 'East' : 'West';
+        question = `The ${ref.name} is at ${ref.col}${ref.row}. Which direction is the ${target.name}?`;
+      } else {
+        answer = dy < 0 ? 'North' : 'South';
+        question = `The ${ref.name} is at ${ref.col}${ref.row}. Which direction is the ${target.name}?`;
+      }
+
+      const wrong = shuffle(directions.filter(d => d !== answer)).slice(0, 3);
+      const options = shuffle([answer, ...wrong]);
+      return { placements, question, answer, options, answerIndex: options.indexOf(answer) };
+    }
+
+    const SOURCE_ITEMS = [
+      { mode: 'source', modeLabel: 'Primary vs Secondary Source', optionA: 'Primary Source', optionB: 'Secondary Source', text: "A soldier's diary entry from Gallipoli, 1915", answer: 'A', prompt: 'Primary sources are firsthand accounts created at the time of an event.', feedbackCorrect: 'Correct — a diary written during the event is a primary source.', feedbackWrong: 'This is a primary source — it was created by someone who experienced the event firsthand.' },
+      { mode: 'source', modeLabel: 'Primary vs Secondary Source', optionA: 'Primary Source', optionB: 'Secondary Source', text: 'A 2020 textbook chapter about the Gallipoli campaign', answer: 'B', prompt: 'Secondary sources analyse or interpret events after they occurred.', feedbackCorrect: 'Correct — a textbook interprets past events using other sources.', feedbackWrong: 'This is a secondary source — it was created later to explain and analyse the event.' },
+      { mode: 'source', modeLabel: 'Primary vs Secondary Source', optionA: 'Primary Source', optionB: 'Secondary Source', text: 'A photograph of the 1901 Federation ceremony', answer: 'A', prompt: 'Photographs taken at the time are primary evidence.', feedbackCorrect: 'Correct — an original photograph from the event is a primary source.', feedbackWrong: 'This photograph was taken at the time — it is a primary source.' },
+      { mode: 'fact', modeLabel: 'Fact vs Opinion', optionA: 'Fact', optionB: 'Opinion', text: 'Australia has six states and two mainland territories.', answer: 'A', prompt: 'Facts can be verified with evidence; opinions express beliefs or judgments.', feedbackCorrect: 'Correct — this can be verified with official geographic data.', feedbackWrong: 'This is a fact — it can be checked and proven true.' },
+      { mode: 'fact', modeLabel: 'Fact vs Opinion', optionA: 'Fact', optionB: 'Opinion', text: 'The Eureka Stockade was the most important event in Australian history.', answer: 'B', prompt: 'Words like "most important" signal a personal judgment.', feedbackCorrect: 'Correct — "most important" is a value judgment, not a verifiable fact.', feedbackWrong: 'This is an opinion — importance is subjective and debatable.' },
+      { mode: 'fact', modeLabel: 'Fact vs Opinion', optionA: 'Fact', optionB: 'Opinion', text: 'The First Fleet arrived in 1788.', answer: 'A', prompt: 'Historical dates supported by records are facts.', feedbackCorrect: 'Correct — the arrival date is documented historical fact.', feedbackWrong: 'This is a fact — the date is recorded in historical records.' },
+    ];
+
+    function selectTimelineEvents() {
+      const record = getBankRecord('timeline');
+      const recentIds = getRecentBankIds('timeline');
+      let eligible = [...TIMELINE_EVENT_BANK];
+
+      if (record.played.length < BANK_MIN_UNIQUE_BEFORE_REUSE) {
+        const filtered = eligible.filter((item) => !recentIds.has(item.id));
+        if (filtered.length >= 4) eligible = filtered;
+      }
+
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const candidate = pickN(eligible, 4);
+        const years = candidate.map((e) => e.year);
+        if (new Set(years).size === 4) {
+          recordBankSelection('timeline', candidate.map((c) => c.id));
+          return candidate;
+        }
+      }
+
+      const fallback = pickN(eligible, 4);
+      recordBankSelection('timeline', fallback.map((c) => c.id));
+      return fallback;
+    }
+
+    function generateLiteraryConnections() {
+      return createBankConnectionsGame('literary-connections', LITERARY_CATEGORY_BANK);
+    }
+
+    function generateRhetoricRound() {
+      const item = RHETORIC_QUOTES[randInt(0, RHETORIC_QUOTES.length - 1)];
+      const pool = ['Simile', 'Alliteration', 'Hyperbole', 'Onomatopoeia', 'Oxymoron', 'Metaphor', 'Personification'];
+      const wrong = shuffle(pool.filter(p => p !== item.device)).slice(0, 4);
+      const options = shuffle([item.device, ...wrong]);
+      return { ...item, options };
+    }
+    function generateEtymologyRound() {
+      const root = ETYMOLOGY_ROOTS[randInt(0, ETYMOLOGY_ROOTS.length - 1)];
+      return { root: root.root, meaning: root.meaning, words: shuffle(root.words.map(w => ({ ...w }))) };
+    }
+    function generateVariableRound() {
+      const scenario = VARIABLE_SCENARIOS[randInt(0, VARIABLE_SCENARIOS.length - 1)];
+      const types = [
+        { key: 'iv', question: 'What is the INDEPENDENT variable (what is changed)?' },
+        { key: 'dv', question: 'What is the DEPENDENT variable (what is measured)?' },
+        { key: 'controlled', question: 'Which is a CONTROLLED variable (kept the same)?' },
+      ];
+      const pick = types[randInt(0, types.length - 1)];
+      let answer, options;
+      if (pick.key === 'controlled') {
+        answer = scenario.controlled[randInt(0, scenario.controlled.length - 1)];
+        const wrong = ['Ramp height', 'Water temperature', 'Brand of equipment', 'Amount of sunlight', 'Type of soil', scenario.iv, scenario.dv]
+          .filter(w => w && !scenario.controlled.includes(w));
+        options = shuffle([answer, ...pickN(wrong, 3)]);
+      } else {
+        answer = scenario[pick.key];
+        const wrong = [scenario.iv, scenario.dv, ...scenario.controlled].filter(w => w !== answer);
+        options = shuffle([answer, ...pickN(wrong, 3)]);
+      }
+      return { ...scenario, question: pick.question, answer, options, answerIndex: options.indexOf(answer) };
+    }
+    function generateScienceConnections() {
+      return createBankConnectionsGame('science-connections', SCIENCE_CATEGORY_BANK);
+    }
+    function generateFoodWebRound() {
+      const web = FOOD_WEBS[randInt(0, FOOD_WEBS.length - 1)];
+      const organisms = web.organisms.map(o => ({ ...o }));
+      const correctOrder = [...organisms].sort((a, b) => a.role - b.role);
+      return { organisms, roles: web.roles, order: shuffledOrder(4), correctOrder, checked: false, correct: false, feedback: '' };
+    }
+    function generateTimelineRound() {
+      const picked = selectTimelineEvents();
+      const events = picked.map((e) => ({ event: e.event, year: e.year, context: e.context }));
+      const sortedEvents = [...events].sort((a, b) => a.year - b.year);
+      return { events, sortedEvents, order: shuffledOrder(4), checked: false, correct: false, revealed: false, feedback: '' };
+    }
+    function generateSourceRound() {
+      const item = SOURCE_ITEMS[randInt(0, SOURCE_ITEMS.length - 1)];
+      return { ...item, answered: false, correct: false, feedback: '', vote: null };
+    }
+
+    /* ─────────────────────────────────────────────
        ALPINE APP
     ───────────────────────────────────────────── */
-    function mathStartersHub() {
+    function classroomStartersHub() {
       return {
         currentView: 'home',
+        subjectFilter: 'all',
         isFullscreen: false,
+        subjects: [
+          { id: 'all', label: 'All Subjects', emoji: '🌐' },
+          { id: 'math', label: 'Mathematics', emoji: '🔢' },
+          { id: 'english', label: 'English & Literacy', emoji: '📚' },
+          { id: 'science', label: 'Science & Inquiry', emoji: '🔬' },
+          { id: 'humanities', label: 'Humanities & Social Sciences', emoji: '🌍' },
+        ],
         initialized: {
           connections: false, target: false, equation: false,
           truths: false, function: false, mystery: false,
+          termle: false, balance: false, pattern: false, estimation: false,
+          literary: false, rhetoric: false, etymology: false,
+          variable: false, sciconnect: false, classifier: false,
+          foodweb: false, timeline: false, maps: false, source: false,
         },
 
         activities: [
-          { id: 'connections', label: 'Math Connections', shortLabel: 'Connections' },
+          { id: 'connections', label: 'Math Connections', shortLabel: 'Connect' },
           { id: 'target', label: 'Target Number / 24-Game', shortLabel: 'Target' },
           { id: 'equation', label: 'Nerdle / Equation Solver', shortLabel: 'Nerdle' },
           { id: 'truths', label: 'Two Truths and a Lie', shortLabel: 'Truths' },
           { id: 'function', label: 'Function Machine', shortLabel: 'Function' },
           { id: 'mystery', label: 'Mystery Number', shortLabel: 'Mystery' },
+          { id: 'termle', label: 'Math Termle', shortLabel: 'Termle' },
+          { id: 'balance', label: 'Balance Scale', shortLabel: 'Balance' },
+          { id: 'pattern', label: 'Pattern Sequence', shortLabel: 'Pattern' },
+          { id: 'estimation', label: 'Estimation Station', shortLabel: 'Estimate' },
+          { id: 'literary', label: 'Literary Connections', shortLabel: 'Literary' },
+          { id: 'rhetoric', label: 'Rhetoric Detective', shortLabel: 'Rhetoric' },
+          { id: 'etymology', label: 'Etymology Builder', shortLabel: 'Roots' },
+          { id: 'variable', label: 'Variable Spotter', shortLabel: 'Variables' },
+          { id: 'sciconnect', label: 'Science Connections', shortLabel: 'SciConn' },
+          { id: 'classifier', label: 'Science Classifier', shortLabel: 'Classify' },
+          { id: 'foodweb', label: 'Food Web Reorder', shortLabel: 'FoodWeb' },
+          { id: 'timeline', label: 'Historical Timeline', shortLabel: 'Timeline' },
+          { id: 'maps', label: 'Map Skills', shortLabel: 'Maps' },
+          { id: 'source', label: 'Source Evaluation', shortLabel: 'Source' },
         ],
 
         hubCards: [
-          {
-            id: 'connections',
-            title: 'Math Connections',
-            description: 'Group 16 tiles into 4 math categories.',
-            badge: 'Interactive Grouping Puzzle',
-            badgeClass: 'bg-violet-600 text-white',
-            icon: 'grid-3x3',
-            color: 'bg-violet-600',
-          },
-          {
-            id: 'target',
-            title: 'Target Number / 24-Game',
-            description: 'Use 5 numbers and basic operations to hit the target.',
-            badge: 'Arithmetic Builder',
-            badgeClass: 'bg-orange-600 text-white',
-            icon: 'target',
-            color: 'bg-orange-600',
-          },
-          {
-            id: 'equation',
-            title: 'Nerdle / Equation Solver',
-            description: 'Guess the hidden mathematical equation in 6 tries.',
-            badge: 'Logic Grid',
-            badgeClass: 'bg-emerald-600 text-white',
-            icon: 'calculator',
-            color: 'bg-emerald-600',
-          },
-          {
-            id: 'truths',
-            title: 'Two Truths and a Lie',
-            description: 'Find the false statement among three math facts.',
-            badge: 'Error Analysis',
-            badgeClass: 'bg-red-600 text-white',
-            icon: 'badge-alert',
-            color: 'bg-red-600',
-          },
-          {
-            id: 'function',
-            title: 'Function Machine',
-            description: 'Discover the hidden input-output rule from the table.',
-            badge: 'Algebra & Patterns',
-            badgeClass: 'bg-sky-600 text-white',
-            icon: 'cog',
-            color: 'bg-sky-600',
-          },
-          {
-            id: 'mystery',
-            title: 'Mystery Number',
-            description: 'Deduce the secret number from clue-by-clue hints.',
-            badge: 'Deductive Reasoning',
-            badgeClass: 'bg-amber-600 text-white',
-            icon: 'search',
-            color: 'bg-amber-600',
-          },
+          { id: 'connections', subject: 'math', title: 'Math Connections', description: 'Group 16 tiles into 4 math categories.', badge: 'Grouping Puzzle', badgeClass: 'bg-violet-600 text-white', icon: 'grid-3x3', color: 'bg-violet-600' },
+          { id: 'target', subject: 'math', title: 'Target Number / 24-Game', description: 'Use 5 numbers and operations to hit the target.', badge: 'Arithmetic Builder', badgeClass: 'bg-orange-600 text-white', icon: 'target', color: 'bg-orange-600' },
+          { id: 'equation', subject: 'math', title: 'Nerdle / Equation Solver', description: 'Guess the hidden equation in 6 tries.', badge: 'Logic Grid', badgeClass: 'bg-emerald-600 text-white', icon: 'calculator', color: 'bg-emerald-600' },
+          { id: 'truths', subject: 'math', title: 'Two Truths and a Lie', description: 'Find the false math statement among three.', badge: 'Error Analysis', badgeClass: 'bg-red-600 text-white', icon: 'badge-alert', color: 'bg-red-600' },
+          { id: 'function', subject: 'math', title: 'Function Machine', description: 'Discover the hidden input-output rule.', badge: 'Input-Output Rules', badgeClass: 'bg-sky-600 text-white', icon: 'cog', color: 'bg-sky-600' },
+          { id: 'mystery', subject: 'math', title: 'Mystery Number', description: 'Deduce the secret number from clues.', badge: 'Deductive Elimination', badgeClass: 'bg-amber-600 text-white', icon: 'search', color: 'bg-amber-600' },
+          { id: 'termle', subject: 'math', title: 'Math Termle', description: 'Guess the 5-letter math vocabulary word.', badge: 'Math Vocabulary', badgeClass: 'bg-pink-600 text-white', icon: 'type', color: 'bg-pink-600' },
+          { id: 'balance', subject: 'math', title: 'Balance Scale', description: 'Solve visual algebra with shapes on a scale.', badge: 'Visual Algebra', badgeClass: 'bg-teal-600 text-white', icon: 'scale', color: 'bg-teal-600' },
+          { id: 'pattern', subject: 'math', title: 'Shape & Pattern Sequence', description: 'Find the next term in a number pattern.', badge: 'Spatial & Numerical', badgeClass: 'bg-indigo-600 text-white', icon: 'trending-up', color: 'bg-indigo-600' },
+          { id: 'estimation', subject: 'math', title: 'Estimation Station', description: 'Quick visual and numerical estimation challenges.', badge: 'Fermi Estimation', badgeClass: 'bg-lime-600 text-white', icon: 'eye', color: 'bg-lime-600' },
+          { id: 'literary', subject: 'english', title: 'Literary Connections', description: 'Group words into literary and grammatical categories.', badge: 'Etymology & Grammar', badgeClass: 'bg-rose-600 text-white', icon: 'book-open', color: 'bg-rose-600' },
+          { id: 'rhetoric', subject: 'english', title: 'Rhetoric & Device Detective', description: 'Identify literary techniques in famous quotes.', badge: 'Language Analysis', badgeClass: 'bg-amber-600 text-white', icon: 'quote', color: 'bg-amber-600' },
+          { id: 'etymology', subject: 'english', title: 'Etymology & Root Builder', description: 'Match Latin and Greek roots to word meanings.', badge: 'Word Origins', badgeClass: 'bg-pink-600 text-white', icon: 'languages', color: 'bg-pink-600' },
+          { id: 'variable', subject: 'science', title: 'Variable Spotter', description: 'Identify IV, DV and controlled variables.', badge: 'Inquiry Skills', badgeClass: 'bg-cyan-600 text-white', icon: 'flask-conical', color: 'bg-cyan-600' },
+          { id: 'sciconnect', subject: 'science', title: 'Science Connections', description: 'Group science terms into Victorian Science topics.', badge: 'Science Concepts', badgeClass: 'bg-green-600 text-white', icon: 'atom', color: 'bg-green-600' },
+          { id: 'classifier', subject: 'science', title: 'Science Classifier', description: 'Sort items across 8 science themes — physical/chemical, energy, forces, and more.', badge: 'Classification', badgeClass: 'bg-lime-600 text-white', icon: 'layers', color: 'bg-lime-600' },
+          { id: 'foodweb', subject: 'science', title: 'Food Web Reorder', description: 'Order Australian ecosystem organisms by energy flow.', badge: 'Ecosystems', badgeClass: 'bg-emerald-600 text-white', icon: 'git-branch', color: 'bg-emerald-600' },
+          { id: 'timeline', subject: 'humanities', title: 'Historical Timeline Order', description: 'Arrange Australian events in chronological order.', badge: 'History', badgeClass: 'bg-orange-600 text-white', icon: 'clock', color: 'bg-orange-600' },
+          { id: 'maps', subject: 'humanities', title: 'Map Skills & Coordinates', description: 'Read grid maps with compass directions.', badge: 'Geography', badgeClass: 'bg-sky-600 text-white', icon: 'map', color: 'bg-sky-600' },
+          { id: 'source', subject: 'humanities', title: 'Source Evaluation', description: 'Classify primary/secondary sources and fact vs opinion.', badge: 'HASS Skills', badgeClass: 'bg-teal-600 text-white', icon: 'file-text', color: 'bg-teal-600' },
         ],
+
+        get filteredHubCards() {
+          if (this.subjectFilter === 'all') return this.hubCards;
+          return this.hubCards.filter(c => c.subject === this.subjectFilter);
+        },
 
         goHome() {
           this.currentView = 'home';
@@ -1445,6 +3006,62 @@
           if (id === 'mystery' && !this.initialized.mystery) {
             this.mysteryNewGame();
             this.initialized.mystery = true;
+          }
+          if (id === 'termle' && !this.initialized.termle) {
+            this.termleNewGame();
+            this.initialized.termle = true;
+          }
+          if (id === 'balance' && !this.initialized.balance) {
+            this.balanceNewGame();
+            this.initialized.balance = true;
+          }
+          if (id === 'pattern' && !this.initialized.pattern) {
+            this.patternNewGame();
+            this.initialized.pattern = true;
+          }
+          if (id === 'estimation' && !this.initialized.estimation) {
+            this.estimationNewGame();
+            this.initialized.estimation = true;
+          }
+          if (id === 'literary' && !this.initialized.literary) {
+            this.literaryNewGame();
+            this.initialized.literary = true;
+          }
+          if (id === 'rhetoric' && !this.initialized.rhetoric) {
+            this.rhetoricNewGame();
+            this.initialized.rhetoric = true;
+          }
+          if (id === 'etymology' && !this.initialized.etymology) {
+            this.etymologyNewGame();
+            this.initialized.etymology = true;
+          }
+          if (id === 'variable' && !this.initialized.variable) {
+            this.variableNewGame();
+            this.initialized.variable = true;
+          }
+          if (id === 'sciconnect' && !this.initialized.sciconnect) {
+            this.sciconnectNewGame();
+            this.initialized.sciconnect = true;
+          }
+          if (id === 'classifier' && !this.initialized.classifier) {
+            this.classifierNewGame();
+            this.initialized.classifier = true;
+          }
+          if (id === 'foodweb' && !this.initialized.foodweb) {
+            this.foodwebNewGame();
+            this.initialized.foodweb = true;
+          }
+          if (id === 'timeline' && !this.initialized.timeline) {
+            this.timelineNewGame();
+            this.initialized.timeline = true;
+          }
+          if (id === 'maps' && !this.initialized.maps) {
+            this.mapsNewGame();
+            this.initialized.maps = true;
+          }
+          if (id === 'source' && !this.initialized.source) {
+            this.sourceNewGame();
+            this.initialized.source = true;
           }
         },
 
@@ -1876,6 +3493,420 @@
           else this.mystery.crossedOff.push(n);
         },
 
+        /* Math Termle */
+        termle: {
+          secret: '', hint: '', guesses: [], currentGuess: '',
+          won: false, lost: false, rows: [], showHint: false,
+          keyState: {},
+          keyboard: [
+            ['Q','W','E','R','T','Y','U','I','O','P'],
+            ['A','S','D','F','G','H','J','K','L'],
+            ['Z','X','C','V','B','N','M','⌫'],
+          ],
+        },
+
+        termleRefreshRows() {
+          this.termle.rows = buildTermleRows(this.termle.secret, this.termle.guesses);
+        },
+
+        termleNewGame() {
+          const data = generateTermleRound();
+          this.termle.secret = data.secret;
+          this.termle.hint = data.hint;
+          this.termle.guesses = [];
+          this.termle.currentGuess = '';
+          this.termle.won = false;
+          this.termle.lost = false;
+          this.termle.showHint = false;
+          this.termle.keyState = {};
+          this.termleRefreshRows();
+          this.refreshIcons();
+        },
+
+        termleKey(key) {
+          if (this.termle.won || this.termle.lost) return;
+          if (key === '⌫') {
+            this.termle.currentGuess = this.termle.currentGuess.slice(0, -1);
+            return;
+          }
+          if (this.termle.currentGuess.length < 5 && /^[A-Z]$/.test(key)) {
+            this.termle.currentGuess += key;
+          }
+        },
+
+        termleSubmit() {
+          if (this.termle.won || this.termle.lost) return;
+          const guess = this.termle.currentGuess.toUpperCase();
+          if (guess.length !== 5) return;
+          if (!TERMLE_VALID.has(guess)) {
+            alert('Not in the math word list — try another 5-letter term!');
+            return;
+          }
+          this.termle.guesses.push(guess);
+          const feedback = evaluateWordleGuess(this.termle.secret, guess);
+          for (let i = 0; i < 5; i++) {
+            const letter = guess[i];
+            const rank = { absent: 0, present: 1, correct: 2 };
+            const current = this.termle.keyState[letter] || 'absent';
+            if (rank[feedback[i]] > rank[current]) this.termle.keyState[letter] = feedback[i];
+          }
+          this.termle.currentGuess = '';
+          if (guess === this.termle.secret) this.termle.won = true;
+          else if (this.termle.guesses.length >= 6) this.termle.lost = true;
+          this.termleRefreshRows();
+        },
+
+        /* Balance Scale */
+        balance: {
+          starWeight: 0, circleWeight: 0,
+          leftStars: 0, leftCircles: 0, rightStars: 0, rightCircles: 0,
+          leftTotal: 0, rightTotal: 0,
+          steps: [], stepIndex: 0, choices: [],
+          selected: null, answered: false,
+        },
+
+        balanceNewGame() {
+          const data = generateBalancePuzzle();
+          Object.assign(this.balance, data, { stepIndex: 0, selected: null, answered: false });
+          this.refreshIcons();
+        },
+
+        balanceGuess(idx) {
+          this.balance.selected = idx;
+          this.balance.answered = true;
+        },
+
+        /* Pattern Continuation */
+        pattern: {
+          display: [], answer: 0, rule: '', typeLabel: '',
+          choices: [], selected: null, answered: false, showRule: false,
+        },
+
+        patternNewGame() {
+          const data = generatePatternPuzzle();
+          this.pattern.display = data.display;
+          this.pattern.answer = data.answer;
+          this.pattern.rule = data.rule;
+          this.pattern.typeLabel = data.typeLabel;
+          this.pattern.choices = data.choices;
+          this.pattern.selected = null;
+          this.pattern.answered = false;
+          this.pattern.showRule = false;
+          this.refreshIcons();
+        },
+
+        patternGuess(idx) {
+          this.pattern.selected = idx;
+          this.pattern.answered = true;
+        },
+
+        /* Literary Connections */
+        litConn: { activeCategories: [], tiles: [], selected: [], solved: [], lives: 4, feedback: '', shaking: false },
+        get litConnSolvedCategories() {
+          return this.litConn.solved.map(id => this.litConn.activeCategories.find(c => c.id === id)).filter(Boolean);
+        },
+        get litConnRemainingTiles() {
+          return this.litConn.tiles.filter(t => !this.litConn.solved.includes(t.categoryId));
+        },
+        litConnToggleTile(id) {
+          if (this.litConn.solved.length === 4 || this.litConn.lives === 0) return;
+          const idx = this.litConn.selected.indexOf(id);
+          if (idx >= 0) this.litConn.selected.splice(idx, 1);
+          else if (this.litConn.selected.length < 4) this.litConn.selected.push(id);
+          this.litConn.feedback = '';
+        },
+        litConnDeselectAll() { this.litConn.selected = []; this.litConn.feedback = ''; },
+        litConnSubmit() {
+          if (this.litConn.selected.length !== 4 || this.litConn.solved.length === 4 || this.litConn.lives === 0) return;
+          const selected = this.litConn.tiles.filter(t => this.litConn.selected.includes(t.id));
+          const cats = new Set(selected.map(t => t.categoryId));
+          if (cats.size === 1) {
+            const catId = selected[0].categoryId;
+            if (!this.litConn.solved.includes(catId)) {
+              this.litConn.solved.push(catId);
+              this.litConn.selected = [];
+              this.litConn.feedback = '';
+              return;
+            }
+          }
+          this.litConn.lives--;
+          this.litConn.feedback = 'Not a match — try again!';
+          this.litConn.shaking = true;
+          setTimeout(() => { this.litConn.shaking = false; this.litConn.selected = []; }, 600);
+        },
+        literaryNewGame() {
+          const game = generateLiteraryConnections();
+          this.litConn.activeCategories = game.activeCategories;
+          this.litConn.tiles = game.tiles;
+          this.litConn.selected = [];
+          this.litConn.solved = [];
+          this.litConn.lives = 4;
+          this.litConn.feedback = '';
+          this.litConn.shaking = false;
+          this.refreshIcons();
+        },
+
+        /* Rhetoric Detective */
+        rhetoric: { quote: '', device: '', hint: '', definition: '', options: [], selected: null, answered: false, revealed: false, showHint: false },
+        rhetoricNewGame() {
+          const data = generateRhetoricRound();
+          Object.assign(this.rhetoric, data, { selected: null, answered: false, revealed: false, showHint: false });
+          this.rhetoric.answerIndex = data.options.indexOf(data.device);
+          this.refreshIcons();
+        },
+        rhetoricGuess(idx) {
+          this.rhetoric.selected = idx;
+          this.rhetoric.answered = true;
+        },
+        rhetoricReveal() { this.rhetoric.revealed = true; },
+        rhetoricOptionClass(idx) {
+          if (!this.rhetoric.answered) return 'border-slate-500 bg-slate-700 hover:bg-slate-600';
+          if (idx === this.rhetoric.answerIndex) return 'border-emerald-400 bg-emerald-700';
+          if (idx === this.rhetoric.selected) return 'border-red-400 bg-red-800';
+          return 'border-slate-600 bg-slate-800 opacity-50';
+        },
+
+        /* Etymology Builder */
+        etymology: { root: '', meaning: '', words: [], selected: [], answered: false, revealed: false, correct: false, feedback: '' },
+        etymologyNewGame() {
+          const data = generateEtymologyRound();
+          Object.assign(this.etymology, data, { selected: [], answered: false, revealed: false, correct: false, feedback: '' });
+          this.refreshIcons();
+        },
+        etymologyToggle(idx) {
+          if (this.etymology.answered) return;
+          const i = this.etymology.selected.indexOf(idx);
+          if (i >= 0) this.etymology.selected.splice(i, 1);
+          else this.etymology.selected.push(idx);
+        },
+        etymologyCheck() {
+          this.etymology.answered = true;
+          const correctIdx = this.etymology.words.map((w, i) => w.correct ? i : -1).filter(i => i >= 0);
+          const selected = [...this.etymology.selected].sort();
+          const expected = [...correctIdx].sort();
+          this.etymology.correct = JSON.stringify(selected) === JSON.stringify(expected);
+          this.etymology.feedback = this.etymology.correct ? 'Perfect — you matched all root words!' : 'Some words were missed or incorrectly selected.';
+        },
+        etymologyReveal() {
+          this.etymology.revealed = true;
+          this.etymology.answered = true;
+          this.etymology.selected = this.etymology.words.map((w, i) => w.correct ? i : -1).filter(i => i >= 0);
+        },
+        etymologyWordClass(idx) {
+          const w = this.etymology.words[idx];
+          if (!this.etymology.answered) {
+            return this.etymology.selected.includes(idx) ? 'border-sky-400 bg-sky-800' : 'border-slate-500 bg-slate-700 hover:bg-slate-600';
+          }
+          if (w.correct) return 'border-emerald-400 bg-emerald-900/50';
+          if (this.etymology.selected.includes(idx)) return 'border-red-400 bg-red-900/50';
+          return 'border-slate-600 bg-slate-800 opacity-50';
+        },
+
+        /* Variable Spotter */
+        variable: { scenario: '', iv: '', dv: '', controlled: [], question: '', options: [], answer: '', answerIndex: 0, selected: null, answered: false, showBreakdown: false },
+        variableNewGame() {
+          const data = generateVariableRound();
+          Object.assign(this.variable, data, { selected: null, answered: false, showBreakdown: false });
+          this.refreshIcons();
+        },
+        variableGuess(idx) { this.variable.selected = idx; this.variable.answered = true; },
+        variableOptionClass(idx) {
+          if (!this.variable.answered) return 'border-slate-500 bg-slate-700 hover:bg-slate-600';
+          if (idx === this.variable.answerIndex) return 'border-emerald-400 bg-emerald-700';
+          if (idx === this.variable.selected) return 'border-red-400 bg-red-800';
+          return 'border-slate-600 bg-slate-800 opacity-50';
+        },
+
+        /* Science Connections */
+        sciConn: { activeCategories: [], tiles: [], selected: [], solved: [], lives: 4, feedback: '', shaking: false },
+        get sciConnSolvedCategories() {
+          return this.sciConn.solved.map(id => this.sciConn.activeCategories.find(c => c.id === id)).filter(Boolean);
+        },
+        get sciConnRemainingTiles() {
+          return this.sciConn.tiles.filter(t => !this.sciConn.solved.includes(t.categoryId));
+        },
+        sciConnToggleTile(id) {
+          if (this.sciConn.solved.length === 4 || this.sciConn.lives === 0) return;
+          const idx = this.sciConn.selected.indexOf(id);
+          if (idx >= 0) this.sciConn.selected.splice(idx, 1);
+          else if (this.sciConn.selected.length < 4) this.sciConn.selected.push(id);
+          this.sciConn.feedback = '';
+        },
+        sciConnDeselectAll() { this.sciConn.selected = []; this.sciConn.feedback = ''; },
+        sciConnSubmit() {
+          if (this.sciConn.selected.length !== 4 || this.sciConn.solved.length === 4 || this.sciConn.lives === 0) return;
+          const selected = this.sciConn.tiles.filter(t => this.sciConn.selected.includes(t.id));
+          const cats = new Set(selected.map(t => t.categoryId));
+          if (cats.size === 1) {
+            const catId = selected[0].categoryId;
+            if (!this.sciConn.solved.includes(catId)) {
+              this.sciConn.solved.push(catId);
+              this.sciConn.selected = [];
+              this.sciConn.feedback = '';
+              return;
+            }
+          }
+          this.sciConn.lives--;
+          this.sciConn.feedback = 'Not a match — try again!';
+          this.sciConn.shaking = true;
+          setTimeout(() => { this.sciConn.shaking = false; this.sciConn.selected = []; }, 600);
+        },
+        sciconnectNewGame() {
+          const game = generateScienceConnections();
+          this.sciConn.activeCategories = game.activeCategories;
+          this.sciConn.tiles = game.tiles;
+          this.sciConn.selected = [];
+          this.sciConn.solved = [];
+          this.sciConn.lives = 4;
+          this.sciConn.feedback = '';
+          this.sciConn.shaking = false;
+          this.refreshIcons();
+        },
+
+        /* Science Classifier */
+        classifier: { instruction: '', labelA: '', labelB: '', themeId: '', items: [], selectedItem: null, done: false, allCorrect: false, feedback: '', checked: false, mistakes: 0 },
+        get classifierBucketA() { return this.classifier.items.filter(i => i.bucket === 'A'); },
+        get classifierBucketB() { return this.classifier.items.filter(i => i.bucket === 'B'); },
+        classifierNewGame() {
+          const data = generateClassifierRound();
+          Object.assign(this.classifier, data);
+          this.refreshIcons();
+        },
+        classifierSelectItem(idx) {
+          if (this.classifier.items[idx].bucket !== null) return;
+          this.classifier.selectedItem = idx;
+        },
+        classifierAssign(bucket) {
+          if (this.classifier.selectedItem === null) return;
+          const item = this.classifier.items[this.classifier.selectedItem];
+          if (item.bucket !== null) return;
+          item.bucket = bucket;
+          if (bucket !== item.answer) this.classifier.mistakes += 1;
+          this.classifier.selectedItem = null;
+          this.classifier.done = this.classifier.items.every(i => i.bucket !== null);
+        },
+        classifierCheck() {
+          if (!this.classifier.done) return;
+          this.classifier.checked = true;
+          this.classifier.allCorrect = this.classifier.items.every(i => i.bucket === i.answer);
+          this.classifier.feedback = this.classifier.allCorrect
+            ? 'All items sorted correctly!'
+            : `Some items are in the wrong category (${this.classifier.mistakes} mistake${this.classifier.mistakes === 1 ? '' : 's'}) — discuss as a class.`;
+        },
+
+        /* Food Web Reorder */
+        foodweb: { organisms: [], roles: [], order: [], correctOrder: [], checked: false, correct: false, feedback: '' },
+        foodwebNewGame() {
+          const data = generateFoodWebRound();
+          Object.assign(this.foodweb, data);
+          this.refreshIcons();
+        },
+        foodwebMove(pos, dir) {
+          const newPos = pos + dir;
+          if (newPos < 0 || newPos > 3) return;
+          const order = [...this.foodweb.order];
+          [order[pos], order[newPos]] = [order[newPos], order[pos]];
+          this.foodweb.order = order;
+        },
+        foodwebCheck() {
+          this.foodweb.checked = true;
+          const current = this.foodweb.order.map(i => this.foodweb.organisms[i]);
+          this.foodweb.correct = current.every((org, i) => org.role === i);
+          this.foodweb.feedback = this.foodweb.correct
+            ? 'Correct energy flow — Producer to Apex Predator!'
+            : 'Not quite — remember: Producer → Primary → Secondary → Apex Predator.';
+        },
+
+        /* Historical Timeline */
+        timeline: { events: [], sortedEvents: [], order: [], checked: false, correct: false, revealed: false, feedback: '' },
+        timelineNewGame() {
+          const data = generateTimelineRound();
+          Object.assign(this.timeline, data);
+          this.refreshIcons();
+        },
+        timelineMove(pos, dir) {
+          const newPos = pos + dir;
+          if (newPos < 0 || newPos > 3) return;
+          const order = [...this.timeline.order];
+          [order[pos], order[newPos]] = [order[newPos], order[pos]];
+          this.timeline.order = order;
+        },
+        timelineCheck() {
+          this.timeline.checked = true;
+          const currentYears = this.timeline.order.map(i => this.timeline.events[i].year);
+          this.timeline.correct = currentYears.every((y, i) => i === 0 || y > currentYears[i - 1]);
+          this.timeline.feedback = this.timeline.correct
+            ? 'Timeline is in correct chronological order!'
+            : 'Some events are out of order — try rearranging.';
+        },
+
+        /* Map Skills */
+        maps: { placements: [], question: '', options: [], answer: '', answerIndex: 0, selected: null, answered: false },
+        mapsNewGame() {
+          const data = generateMapChallenge();
+          Object.assign(this.maps, data, { selected: null, answered: false });
+          this.$nextTick(() => {
+            drawMapCanvas(this.$refs.mapCanvas, this.maps);
+            this.refreshIcons();
+          });
+        },
+        mapsGuess(idx) { this.maps.selected = idx; this.maps.answered = true; },
+        mapsOptionClass(idx) {
+          if (!this.maps.answered) return 'border-slate-500 bg-slate-700 hover:bg-slate-600';
+          if (idx === this.maps.answerIndex) return 'border-emerald-400 bg-emerald-700';
+          if (idx === this.maps.selected) return 'border-red-400 bg-red-800';
+          return 'border-slate-600 bg-slate-800 opacity-50';
+        },
+        redrawMapCanvas() {
+          this.$nextTick(() => drawMapCanvas(this.$refs.mapCanvas, this.maps));
+        },
+
+        /* Source Evaluation */
+        source: { mode: '', modeLabel: '', optionA: '', optionB: '', text: '', answer: '', prompt: '', feedbackCorrect: '', feedbackWrong: '', answered: false, correct: false, feedback: '', vote: null },
+        sourceNewGame() {
+          const data = generateSourceRound();
+          Object.assign(this.source, data, { answered: false, correct: false, feedback: '', vote: null });
+          this.refreshIcons();
+        },
+        sourceVote(choice) {
+          this.source.vote = choice;
+          this.source.answered = true;
+          this.source.correct = choice === this.source.answer;
+          this.source.feedback = this.source.correct ? this.source.feedbackCorrect : this.source.feedbackWrong;
+        },
+        sourceButtonClass(choice) {
+          if (!this.source.answered) return 'border-slate-500 bg-slate-700 hover:bg-slate-600';
+          if (choice === this.source.answer) return 'border-emerald-400 bg-emerald-700';
+          if (choice === this.source.vote) return 'border-red-400 bg-red-800';
+          return 'border-slate-600 bg-slate-800 opacity-50';
+        },
+
+        /* Estimation Station */
+        estimation: {
+          type: 'dots', question: '', answer: 0, answerDisplay: '',
+          dotPositions: [], bars: [], angleDeg: 0,
+          range5: '', range10: '', revealed: false,
+        },
+
+        estimationNewGame() {
+          const data = generateEstimationChallenge();
+          Object.assign(this.estimation, data, { revealed: false });
+          this.$nextTick(() => {
+            drawEstimationCanvas(this.$refs.estimationCanvas, this.estimation);
+            this.refreshIcons();
+          });
+        },
+
+        estimationReveal() {
+          this.estimation.revealed = true;
+        },
+
+        redrawEstimationCanvas() {
+          this.$nextTick(() => {
+            drawEstimationCanvas(this.$refs.estimationCanvas, this.estimation);
+          });
+        },
+
         refreshIcons() {
           this.$nextTick(() => lucide.createIcons());
         },
@@ -1884,8 +3915,14 @@
           document.addEventListener('fullscreenchange', () => {
             this.isFullscreen = !!document.fullscreenElement;
             this.refreshIcons();
+            if (this.currentView === 'estimation') this.redrawEstimationCanvas();
+            if (this.currentView === 'maps') this.redrawMapCanvas();
           });
-          this.$watch('currentView', () => this.refreshIcons());
+          this.$watch('currentView', (view) => {
+            this.refreshIcons();
+            if (view === 'estimation') this.redrawEstimationCanvas();
+            if (view === 'maps') this.redrawMapCanvas();
+          });
           this.refreshIcons();
         },
       };
