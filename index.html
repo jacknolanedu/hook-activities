@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classroom Math Starters</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-10px); }
+      40%, 80% { transform: translateX(10px); }
+    }
+    .shake { animation: shake 0.5s ease-in-out; }
+    @keyframes celebrate {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .celebrate { animation: celebrate 0.6s ease-in-out infinite; }
+    .hub-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .hub-card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    }
+    .hub-card:active {
+      transform: scale(0.98);
+    }
+    .nerdle-correct { background-color: #22c55e; color: #052e16; }
+    .nerdle-present { background-color: #eab308; color: #422006; }
+    .nerdle-absent { background-color: #475569; color: #e2e8f0; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-900 text-white antialiased" x-data="mathStartersHub()" x-init="init()" x-cloak>
+
+  <!-- ═══════════════ TOP BAR ═══════════════ -->
+  <header class="sticky top-0 z-50 border-b-4 border-sky-500 bg-slate-950 px-4 py-4 shadow-2xl sm:px-8">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap items-center gap-4">
+        <button @click="goHome()" class="text-left transition-opacity hover:opacity-90" title="Return to launcher">
+          <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
+            Classroom Math Starters
+          </h1>
+        </button>
+        <button @click="goHome()"
+          class="flex min-h-14 items-center gap-2 rounded-xl border-2 border-slate-600 bg-slate-800 px-5 text-xl font-bold hover:bg-slate-700"
+          x-show="currentView !== 'home'">
+          <span>🏠</span>
+          <span class="hidden sm:inline">Home / All Games</span>
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4 sm:gap-6">
+        <!-- Countdown Timer -->
+        <div class="flex items-center gap-3">
+          <div class="relative flex h-20 w-20 shrink-0 items-center justify-center">
+            <svg class="absolute inset-0 -rotate-90" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="34" fill="none" stroke="#334155" stroke-width="6" />
+              <circle cx="40" cy="40" r="34" fill="none"
+                :stroke="timer.secondsLeft === 0 ? '#f87171' : timer.secondsLeft <= 60 ? '#fbbf24' : '#38bdf8'"
+                stroke-width="6" stroke-linecap="round"
+                :stroke-dasharray="213.6"
+                :stroke-dashoffset="213.6 * (1 - timer.secondsLeft / 300)" />
+            </svg>
+            <span class="text-2xl font-bold tabular-nums"
+              :class="timer.secondsLeft === 0 ? 'text-red-400' : timer.secondsLeft <= 60 ? 'text-amber-400' : 'text-white'"
+              x-text="timerDisplay"></span>
+          </div>
+          <div class="flex gap-2">
+            <button @click="timerStart()" :disabled="timer.running || timer.secondsLeft === 0"
+              class="flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40"
+              title="Start"><i data-lucide="play" class="h-7 w-7"></i></button>
+            <button @click="timerPause()" :disabled="!timer.running"
+              class="flex h-14 w-14 items-center justify-center rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40"
+              title="Pause"><i data-lucide="pause" class="h-7 w-7"></i></button>
+            <button @click="timerReset()"
+              class="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-600 hover:bg-slate-500"
+              title="Reset"><i data-lucide="rotate-ccw" class="h-7 w-7"></i></button>
+          </div>
+        </div>
+
+        <!-- Fullscreen -->
+        <button @click="toggleFullscreen()"
+          class="flex min-h-14 items-center gap-3 rounded-xl bg-sky-600 px-5 text-xl font-semibold hover:bg-sky-500">
+          <i :data-lucide="isFullscreen ? 'minimize' : 'maximize'" class="h-7 w-7"></i>
+          <span class="hidden sm:inline" x-text="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════ LANDING PAGE ═══════════════ -->
+  <main x-show="currentView === 'home'" x-transition.opacity class="mx-auto max-w-7xl p-4 sm:p-8">
+    <p class="mb-8 text-center text-2xl text-slate-300 sm:text-3xl">Choose a daily starter activity for your class</p>
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <template x-for="card in hubCards" :key="card.id">
+        <button @click="launchActivity(card.id)"
+          class="hub-card flex min-h-56 flex-col items-start rounded-2xl border-2 border-slate-600 bg-slate-800 p-8 text-left shadow-lg hover:border-sky-400">
+          <div class="mb-4 flex w-full items-start justify-between gap-4">
+            <div class="flex h-16 w-16 items-center justify-center rounded-xl" :class="card.color">
+              <i :data-lucide="card.icon" class="h-9 w-9 text-white"></i>
+            </div>
+            <span class="rounded-full px-4 py-2 text-lg font-bold" :class="card.badgeClass" x-text="card.badge"></span>
+          </div>
+          <h2 class="mb-3 text-3xl font-extrabold text-white sm:text-4xl" x-text="card.title"></h2>
+          <p class="mb-4 text-xl leading-relaxed text-slate-300 sm:text-2xl" x-text="card.description"></p>
+          <div x-show="card.subOptions" class="flex flex-wrap gap-2">
+            <template x-for="sub in card.subOptions" :key="sub">
+              <span class="rounded-lg bg-slate-700 px-3 py-1 text-lg font-semibold text-slate-200" x-text="sub"></span>
+            </template>
+          </div>
+        </button>
+      </template>
+    </div>
+  </main>
+
+  <!-- ═══════════════ IN-GAME NAV ═══════════════ -->
+  <nav x-show="currentView !== 'home'" class="border-b border-slate-700 bg-slate-800 px-4 py-3 sm:px-8">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
+      <button @click="goHome()"
+        class="flex min-h-14 items-center gap-3 rounded-xl bg-slate-700 px-6 text-xl font-bold hover:bg-slate-600 sm:text-2xl">
+        <i data-lucide="arrow-left" class="h-7 w-7"></i>
+        Back to Launcher
+      </button>
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="text-lg font-semibold text-slate-400 sm:text-xl">Quick switch:</label>
+        <select x-model="currentView" @change="switchActivity(currentView)"
+          class="min-h-14 rounded-xl border-2 border-slate-600 bg-slate-900 px-4 text-xl font-bold text-white">
+          <template x-for="act in activities" :key="act.id">
+            <option :value="act.id" x-text="act.label"></option>
+          </template>
+        </select>
+        <div class="hidden flex-wrap gap-2 lg:flex">
+          <template x-for="act in activities" :key="act.id">
+            <button @click="switchActivity(act.id)"
+              class="min-h-12 rounded-xl border-2 px-4 text-lg font-bold transition-colors"
+              :class="currentView === act.id
+                ? 'border-sky-400 bg-sky-600 text-white'
+                : 'border-slate-600 bg-slate-700 text-slate-300 hover:bg-slate-600'"
+              x-text="act.shortLabel"></button>
+          </template>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════ ACTIVITY STAGE ═══════════════ -->
+  <div x-show="currentView !== 'home'" class="mx-auto max-w-7xl p-4 sm:p-8">
+
+    <!-- ─── GAME 1: MATH CONNECTIONS ─── -->
+    <section x-show="currentView === 'connections'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Math Connections</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Select 4 related tiles, then submit. Find all 4 groups!</p>
+
+      <!-- Mistakes -->
+      <div class="mb-4 flex flex-wrap items-center justify-center gap-4">
+        <span class="text-2xl font-semibold text-slate-300">Mistakes:</span>
+        <div class="flex gap-2">
+          <template x-for="i in 4" :key="i">
+            <i data-lucide="heart" class="h-9 w-9"
+              :class="i <= connections.lives ? 'fill-red-500 text-red-500' : 'fill-slate-700 text-slate-600'"></i>
+          </template>
+        </div>
+        <button @click="connectionsDeselectAll()"
+          class="min-h-14 rounded-xl bg-slate-600 px-6 text-xl font-bold hover:bg-slate-500">
+          Deselect All
+        </button>
+      </div>
+
+      <!-- Feedback -->
+      <p x-show="connections.feedback" x-text="connections.feedback"
+        class="mb-4 text-center text-3xl font-bold text-red-400"></p>
+      <p x-show="connections.solved.length === 4" class="mb-4 rounded-xl bg-emerald-600 py-4 text-center text-3xl font-bold">
+        All groups found — great work!
+      </p>
+      <p x-show="connections.lives === 0" class="mb-4 rounded-xl bg-red-600 py-4 text-center text-3xl font-bold">
+        Out of mistakes — tap New Game to try again!
+      </p>
+
+      <!-- Solved banners -->
+      <div class="mb-4 flex flex-col gap-3">
+        <template x-for="cat in connectionsSolvedCategories" :key="cat.id">
+          <div class="flex w-full flex-wrap items-center justify-center gap-4 rounded-xl px-6 py-5"
+            :class="categoryBannerClass(cat.difficulty)">
+            <span class="text-2xl font-extrabold md:text-3xl" x-text="cat.title"></span>
+            <span class="hidden text-2xl font-bold opacity-60 md:inline">—</span>
+            <template x-for="item in cat.items" :key="item">
+              <span class="rounded-lg bg-black/15 px-4 py-2 text-xl font-bold md:text-2xl" x-text="item"></span>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Grid -->
+      <div class="mx-auto grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"
+        :class="{ shake: connections.shaking }">
+        <template x-for="tile in connectionsRemainingTiles" :key="tile.id">
+          <button @click="connectionsToggleTile(tile.id)"
+            :disabled="connections.solved.length === 4 || connections.lives === 0"
+            class="flex min-h-28 items-center justify-center rounded-xl border-2 px-3 py-4 text-2xl font-bold transition-colors sm:min-h-32 sm:text-3xl"
+            :class="connections.selected.includes(tile.id)
+              ? 'border-sky-400 bg-slate-500 text-white ring-2 ring-sky-400'
+              : 'border-slate-500 bg-slate-700 text-white hover:bg-slate-600'">
+            <span x-text="tile.text"></span>
+          </button>
+        </template>
+      </div>
+
+      <div class="mt-8 flex flex-col items-center gap-6">
+        <button @click="connectionsSubmit()"
+          :disabled="connections.selected.length !== 4 || connections.solved.length === 4 || connections.lives === 0"
+          class="min-h-16 min-w-56 rounded-xl bg-sky-600 px-12 text-3xl font-bold hover:bg-sky-500 disabled:opacity-40">
+          Submit (<span x-text="connections.selected.length"></span>/4)
+        </button>
+
+        <button @click="connectionsNewGame()"
+          class="flex min-h-20 items-center gap-4 rounded-2xl border-4 border-violet-300 bg-violet-600 px-12 py-4 text-3xl font-extrabold text-white shadow-xl transition-colors hover:bg-violet-500 sm:text-4xl">
+          <i data-lucide="shuffle" class="h-10 w-10"></i>
+          New Game / Shuffle Puzzle
+        </button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 2: TARGET NUMBER ─── -->
+    <section x-show="currentView === 'target'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Target Number</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Use all 5 numbers with + − × ÷ and parentheses to hit the target!</p>
+
+      <!-- Success overlay -->
+      <div x-show="target.won"
+        class="celebrate mb-6 rounded-2xl border-4 border-emerald-400 bg-emerald-600 px-8 py-10 text-center">
+        <p class="text-6xl font-extrabold sm:text-8xl">🎉 TARGET HIT! 🎉</p>
+        <p class="mt-4 text-3xl font-bold" x-text="target.expression + ' = ' + target.target"></p>
+      </div>
+
+      <!-- Target display -->
+      <div class="mb-8 text-center">
+        <p class="text-2xl font-semibold text-slate-400">TARGET</p>
+        <p class="text-8xl font-extrabold text-sky-400 sm:text-9xl" x-text="target.target"></p>
+        <button @click="targetGenerate()"
+          class="mt-6 inline-flex min-h-20 items-center gap-4 rounded-2xl border-4 border-violet-300 bg-violet-600 px-12 py-4 text-3xl font-extrabold text-white shadow-xl transition-colors hover:bg-violet-500 sm:text-4xl">
+          <i data-lucide="refresh-cw" class="h-10 w-10"></i>
+          New Game / Generate Target
+        </button>
+      </div>
+
+      <!-- Source numbers -->
+      <div class="mb-6 flex flex-wrap justify-center gap-4">
+        <template x-for="(num, idx) in target.numbers" :key="idx">
+          <button @click="targetAddNumber(idx)"
+            :disabled="target.usedNumbers.includes(idx) || target.won || !targetCanAddNumber()"
+            class="flex h-24 w-24 items-center justify-center rounded-2xl border-2 text-4xl font-extrabold transition-colors sm:h-28 sm:w-28 sm:text-5xl"
+            :class="target.usedNumbers.includes(idx)
+              ? 'border-slate-600 bg-slate-800 text-slate-600 cursor-not-allowed'
+              : 'border-orange-400 bg-orange-600 text-white hover:bg-orange-500'">
+            <span x-text="num"></span>
+          </button>
+        </template>
+      </div>
+
+      <!-- Expression display -->
+      <div class="mb-4 rounded-2xl border-2 border-slate-600 bg-slate-800 px-6 py-5 text-center">
+        <p class="mb-1 text-xl text-slate-400">Your Expression</p>
+        <p class="min-h-[3rem] break-all text-3xl font-bold sm:text-4xl"
+          x-text="target.expression || '(tap numbers and operators)'"></p>
+        <p class="mt-2 text-2xl font-semibold"
+          :class="target.result === target.target ? 'text-emerald-400' : 'text-slate-400'">
+          Result: <span x-text="target.result !== null ? target.result : '—'"></span>
+        </p>
+      </div>
+
+      <!-- Operators -->
+      <div class="mb-4 flex flex-wrap justify-center gap-3">
+        <template x-for="op in ['+', '−', '×', '÷', '(', ')']" :key="op">
+          <button @click="targetAddOperator(op)"
+            :disabled="target.won || !targetCanAddOperator(op)"
+            class="flex h-16 w-16 items-center justify-center rounded-xl text-3xl font-bold sm:h-20 sm:w-20 sm:text-4xl"
+            :class="target.won || !targetCanAddOperator(op)
+              ? 'cursor-not-allowed bg-slate-700 text-slate-500'
+              : 'bg-slate-600 hover:bg-slate-500'">
+            <span x-text="op"></span>
+          </button>
+        </template>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex flex-wrap justify-center gap-4">
+        <button @click="targetBackspace()" :disabled="target.won"
+          class="min-h-14 rounded-xl bg-amber-600 px-8 text-2xl font-bold hover:bg-amber-500">
+          <i data-lucide="delete" class="mr-2 inline h-6 w-6"></i> Backspace
+        </button>
+        <button @click="targetClear()" :disabled="target.won"
+          class="min-h-14 rounded-xl bg-slate-600 px-8 text-2xl font-bold hover:bg-slate-500">
+          Clear Expression
+        </button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 4: TWO TRUTHS AND A LIE ─── -->
+    <section x-show="currentView === 'truths'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Two Truths and a Lie</h2>
+      <p class="mb-8 text-center text-2xl text-slate-300">Two statements are true — find the Lie!</p>
+
+      <div x-show="truths.solved" class="celebrate mb-6 rounded-2xl border-4 border-emerald-400 bg-emerald-600 px-8 py-8 text-center">
+        <p class="text-4xl font-extrabold sm:text-5xl">✓ Correct! That was the Lie!</p>
+        <p class="mt-4 text-2xl font-bold" x-text="truths.lieText"></p>
+        <p class="mt-4 text-xl" x-text="truths.explanation"></p>
+      </div>
+      <div x-show="truths.wrongPick" class="mb-6 rounded-2xl border-4 border-amber-400 bg-amber-700 px-8 py-6 text-center">
+        <p class="text-3xl font-bold">Not quite — that's actually true! Try again.</p>
+      </div>
+
+      <div class="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+        <template x-for="stmt in truths.statements" :key="stmt.letter">
+          <button @click="truthsPick(stmt.letter)"
+            :disabled="truths.solved"
+            class="hub-card flex min-h-48 flex-col rounded-2xl border-2 p-8 text-left transition-colors"
+            :class="truths.selected === stmt.letter && truths.solved
+              ? 'border-red-400 bg-red-900/50'
+              : truths.selected === stmt.letter
+                ? 'border-amber-400 bg-amber-900/30'
+                : 'border-slate-600 bg-slate-800 hover:border-sky-400'">
+            <span class="mb-4 text-5xl font-extrabold text-sky-400" x-text="stmt.letter"></span>
+            <p class="text-2xl font-bold leading-relaxed sm:text-3xl" x-text="stmt.text"></p>
+          </button>
+        </template>
+      </div>
+
+      <div class="mt-8 flex justify-center">
+        <button @click="truthsNewRound()"
+          class="flex min-h-20 items-center gap-4 rounded-2xl border-4 border-violet-300 bg-violet-600 px-12 py-4 text-3xl font-extrabold text-white shadow-xl hover:bg-violet-500">
+          <i data-lucide="refresh-cw" class="h-10 w-10"></i>
+          Generate New Statements
+        </button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 5: FUNCTION MACHINE ─── -->
+    <section x-show="currentView === 'function'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Function Machine</h2>
+      <p class="mb-8 text-center text-2xl text-slate-300">Study the inputs and outputs — what is the hidden rule?</p>
+
+      <div class="mx-auto mb-8 max-w-3xl rounded-2xl border-4 border-sky-500 bg-slate-800 p-8 text-center">
+        <div class="mb-4 text-6xl">⚙️</div>
+        <p class="text-3xl font-bold text-sky-400">FUNCTION MACHINE</p>
+        <div class="mt-6 space-y-4">
+          <template x-for="row in functionMachine.table" :key="row.input">
+            <div class="flex items-center justify-center gap-4 text-3xl font-bold sm:text-4xl">
+              <span class="rounded-xl bg-orange-600 px-6 py-3" x-text="row.input"></span>
+              <span class="text-slate-400">➔</span>
+              <span class="rounded-xl bg-emerald-600 px-6 py-3" x-text="row.output"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Test input -->
+      <div class="mx-auto mb-8 max-w-xl rounded-2xl border-2 border-slate-600 bg-slate-800 p-6">
+        <p class="mb-4 text-center text-2xl font-bold text-slate-300">Test the Machine</p>
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <input type="number" x-model.number="functionMachine.testInput"
+            class="min-h-16 w-32 rounded-xl border-2 border-slate-500 bg-slate-900 px-4 text-center text-3xl font-bold text-white"
+            placeholder="Input" />
+          <span class="text-3xl">➔</span>
+          <span class="flex min-h-16 min-w-32 items-center justify-center rounded-xl bg-emerald-700 px-6 text-3xl font-bold"
+            x-text="functionMachineTestOutput()"></span>
+        </div>
+      </div>
+
+      <!-- Rule guess -->
+      <div class="mx-auto mb-8 max-w-3xl">
+        <p class="mb-4 text-center text-2xl font-bold text-slate-300">What is the rule?</p>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <template x-for="(choice, idx) in functionMachine.choices" :key="idx">
+            <button @click="functionMachineGuess(idx)"
+              class="min-h-16 rounded-xl border-2 px-6 text-xl font-bold transition-colors sm:text-2xl"
+              :class="functionMachine.guessResult === 'correct' && functionMachine.selectedGuess === idx
+                ? 'border-emerald-400 bg-emerald-600'
+                : functionMachine.guessResult === 'wrong' && functionMachine.selectedGuess === idx
+                  ? 'border-red-400 bg-red-800'
+                  : 'border-slate-600 bg-slate-700 hover:bg-slate-600'"
+              x-text="choice"></button>
+          </template>
+        </div>
+        <p x-show="functionMachine.guessResult === 'correct'" class="mt-4 text-center text-3xl font-bold text-emerald-400">Correct rule!</p>
+      </div>
+
+      <div class="mb-8 flex flex-wrap justify-center gap-4">
+        <button @click="functionMachine.showRule = !functionMachine.showRule"
+          class="min-h-14 rounded-xl bg-amber-600 px-8 text-2xl font-bold hover:bg-amber-500"
+          x-text="functionMachine.showRule ? 'Hide Rule' : 'Reveal Rule (Teacher)'"></button>
+        <div x-show="functionMachine.showRule" class="flex min-h-14 items-center rounded-xl border-2 border-amber-400 bg-amber-900/40 px-8 text-2xl font-bold text-amber-200"
+          x-text="functionMachine.ruleText"></div>
+      </div>
+
+      <div class="flex justify-center">
+        <button @click="functionMachineNew()"
+          class="flex min-h-20 items-center gap-4 rounded-2xl border-4 border-violet-300 bg-violet-600 px-12 py-4 text-3xl font-extrabold text-white shadow-xl hover:bg-violet-500">
+          <i data-lucide="refresh-cw" class="h-10 w-10"></i>
+          New Machine
+        </button>
+      </div>
+    </section>
+
+    <!-- ─── GAME 6: MYSTERY NUMBER ─── -->
+    <section x-show="currentView === 'mystery'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Mystery Number</h2>
+      <p class="mb-2 text-center text-2xl text-slate-300">Who Am I? Use the clues to find the secret number!</p>
+      <p class="mb-8 text-center text-xl text-slate-400">Clue <span x-text="mystery.cluesRevealed"></span> of <span x-text="mystery.clues.length"></span></p>
+
+      <div x-show="mystery.revealed" class="celebrate mb-6 rounded-2xl border-4 border-emerald-400 bg-emerald-600 px-8 py-10 text-center">
+        <p class="text-5xl font-extrabold sm:text-6xl">🎉 The Mystery Number is <span x-text="mystery.secret"></span>! 🎉</p>
+      </div>
+
+      <!-- Clues -->
+      <div class="mx-auto mb-8 max-w-3xl space-y-4">
+        <template x-for="(clue, idx) in mystery.clues" :key="idx">
+          <div x-show="idx < mystery.cluesRevealed"
+            class="rounded-xl border-2 border-sky-500 bg-slate-800 px-8 py-6 text-2xl font-bold sm:text-3xl"
+            x-text="'Clue ' + (idx+1) + ': ' + clue"></div>
+        </template>
+      </div>
+
+      <div class="mb-8 flex flex-wrap justify-center gap-4">
+        <button @click="mysteryRevealNextClue()" :disabled="mystery.cluesRevealed >= mystery.clues.length"
+          class="min-h-16 rounded-xl bg-sky-600 px-10 text-2xl font-bold hover:bg-sky-500 disabled:opacity-40">
+          Reveal Next Clue
+        </button>
+        <button @click="mystery.revealed = true"
+          class="min-h-16 rounded-xl bg-emerald-600 px-10 text-2xl font-bold hover:bg-emerald-500">
+          Reveal Answer
+        </button>
+        <button @click="mysteryNewGame()"
+          class="min-h-16 rounded-xl border-2 border-violet-300 bg-violet-600 px-10 text-2xl font-bold hover:bg-violet-500">
+          <i data-lucide="refresh-cw" class="mr-2 inline h-6 w-6"></i> New Mystery Number
+        </button>
+      </div>
+
+      <!-- 1-100 grid -->
+      <div class="mx-auto max-w-4xl">
+        <p class="mb-4 text-center text-xl text-slate-400">Tap numbers to cross them off as you eliminate options</p>
+        <div class="grid grid-cols-10 gap-2">
+          <template x-for="n in mystery.gridNumbers" :key="n">
+            <button @click="mysteryToggleCross(n)"
+              class="flex aspect-square items-center justify-center rounded-lg border-2 text-lg font-bold transition-colors sm:text-xl"
+              :class="mystery.crossedOff.includes(n)
+                ? 'border-slate-600 bg-slate-800 text-slate-600 line-through'
+                : n === mystery.secret && mystery.revealed
+                  ? 'border-emerald-400 bg-emerald-600 text-white'
+                  : 'border-slate-500 bg-slate-700 text-white hover:bg-slate-600'"
+              x-text="n"></button>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── GAME 3: EQUATION SOLVER (NERDLE) ─── -->
+    <section x-show="currentView === 'equation'" x-transition.opacity>
+      <h2 class="mb-2 text-center text-4xl font-bold sm:text-5xl">Equation Solver</h2>
+      <p class="mb-6 text-center text-2xl text-slate-300">Guess the hidden equation in 6 tries!</p>
+
+      <div x-show="equation.won" class="celebrate mb-6 rounded-2xl border-4 border-emerald-400 bg-emerald-600 px-8 py-8 text-center">
+        <p class="text-5xl font-extrabold sm:text-6xl">🎉 Equation Found! 🎉</p>
+        <p class="mt-4 text-3xl font-bold" x-text="equation.secret"></p>
+      </div>
+      <div x-show="equation.lost" class="mb-6 rounded-2xl border-4 border-red-400 bg-red-600 px-8 py-8 text-center">
+        <p class="text-4xl font-extrabold">Out of guesses!</p>
+        <p class="mt-4 text-2xl font-bold">Answer: <span x-text="equation.secret"></span></p>
+      </div>
+
+      <!-- Guess grid -->
+      <div class="mx-auto mb-8 max-w-2xl space-y-3">
+        <template x-for="(row, rowIdx) in equation.rows" :key="rowIdx">
+          <div class="flex justify-center gap-2">
+            <template x-for="(cell, cellIdx) in row.cells" :key="cellIdx">
+              <div class="flex h-16 w-14 items-center justify-center rounded-lg border-2 text-2xl font-extrabold sm:h-20 sm:w-16 sm:text-3xl"
+                :class="{
+                  'bg-slate-800 border-slate-600': !cell.char,
+                  'bg-slate-700 border-slate-500': cell.char && !cell.state,
+                  'nerdle-correct border-emerald-400': cell.state === 'correct',
+                  'nerdle-present border-amber-400': cell.state === 'present',
+                  'nerdle-absent border-slate-500': cell.state === 'absent'
+                }"
+                x-text="cell.char"></div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Current input -->
+      <div class="mb-6 text-center">
+        <p class="mb-2 text-xl text-slate-400">Current Guess</p>
+        <p class="text-4xl font-bold tracking-widest" x-text="equation.currentGuess.padEnd(equation.secret.length, '·')"></p>
+      </div>
+
+      <!-- Character keyboard -->
+      <div class="mx-auto mb-6 max-w-3xl">
+        <div class="mb-3 flex flex-wrap justify-center gap-2">
+          <template x-for="ch in equation.digits" :key="'d'+ch">
+            <button @click="equationAddChar(ch)" :disabled="equation.won || equation.lost"
+              class="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-600 text-2xl font-bold hover:bg-slate-500 sm:h-16 sm:w-16 sm:text-3xl"
+              x-text="ch"></button>
+          </template>
+        </div>
+        <div class="mb-3 flex flex-wrap justify-center gap-2">
+          <template x-for="ch in equation.ops" :key="'o'+ch">
+            <button @click="equationAddChar(ch)" :disabled="equation.won || equation.lost"
+              class="flex h-14 w-14 items-center justify-center rounded-xl bg-sky-700 text-2xl font-bold hover:bg-sky-600 sm:h-16 sm:w-16 sm:text-3xl"
+              x-text="ch"></button>
+          </template>
+          <button @click="equationAddChar('=')" :disabled="equation.won || equation.lost"
+            class="flex h-14 w-14 items-center justify-center rounded-xl bg-sky-700 text-2xl font-bold hover:bg-sky-600 sm:h-16 sm:w-16 sm:text-3xl">=</button>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3">
+          <button @click="equationBackspace()" :disabled="equation.won || equation.lost"
+            class="min-h-14 rounded-xl bg-amber-600 px-8 text-xl font-bold hover:bg-amber-500">
+            <i data-lucide="delete" class="mr-2 inline h-6 w-6"></i> Backspace
+          </button>
+          <button @click="equationSubmitGuess()" :disabled="equation.won || equation.lost || equation.currentGuess.length !== equation.secret.length"
+            class="min-h-14 rounded-xl bg-emerald-600 px-8 text-xl font-bold hover:bg-emerald-500 disabled:opacity-40">
+            Submit Guess
+          </button>
+          <button @click="equationNewGame()"
+            class="min-h-14 rounded-xl border-2 border-violet-300 bg-violet-600 px-8 text-xl font-bold hover:bg-violet-500">
+            <i data-lucide="refresh-cw" class="mr-2 inline h-6 w-6"></i> New Game
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /* ─────────────────────────────────────────────
+       MATH CONNECTIONS — PROCEDURAL GENERATORS
+    ───────────────────────────────────────────── */
+    const BANNER_CLASSES = {
+      easy: 'bg-yellow-400 text-yellow-950',
+      medium: 'bg-emerald-500 text-emerald-950',
+      hard: 'bg-sky-500 text-sky-950',
+      tricky: 'bg-violet-500 text-violet-950',
+    };
+
+    const CONNECTIONS_PUZZLE_HISTORY = new Set();
+    const MAX_PUZZLE_HISTORY = 200;
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function pickN(arr, n) {
+      const copy = shuffle([...arr]);
+      return copy.slice(0, Math.min(n, copy.length));
+    }
+
+    function uniquePush(set, value, list) {
+      if (!set.has(value)) {
+        set.add(value);
+        list.push(value);
+        return true;
+      }
+      return false;
+    }
+
+    function isPrime(n) {
+      if (n < 2) return false;
+      if (n === 2) return true;
+      if (n % 2 === 0) return false;
+      for (let i = 3; i <= Math.sqrt(n); i += 2) {
+        if (n % i === 0) return false;
+      }
+      return true;
+    }
+
+    function normalizeItem(text) {
+      return String(text).trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function categoryHasInternalDuplicates(category) {
+      const seen = new Set();
+      for (const item of category.items) {
+        const key = normalizeItem(item);
+        if (seen.has(key)) return true;
+        seen.add(key);
+      }
+      return category.items.length !== 4;
+    }
+
+    function categoryOverlapsOthers(category, others) {
+      const keys = new Set(category.items.map(normalizeItem));
+      for (const other of others) {
+        for (const item of other.items) {
+          if (keys.has(normalizeItem(item))) return true;
+        }
+      }
+      return false;
+    }
+
+    function puzzleSignature(categories) {
+      return categories
+        .map(c => `${c.title}|${[...c.items].map(normalizeItem).sort().join(',')}`)
+        .sort()
+        .join(';;');
+    }
+
+    function rememberPuzzleSignature(sig) {
+      CONNECTIONS_PUZZLE_HISTORY.add(sig);
+      if (CONNECTIONS_PUZZLE_HISTORY.size > MAX_PUZZLE_HISTORY) {
+        const first = CONNECTIONS_PUZZLE_HISTORY.values().next().value;
+        CONNECTIONS_PUZZLE_HISTORY.delete(first);
+      }
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function evalExpression(exprStr) {
+      if (exprStr == null || exprStr === '') return null;
+      const sanitized = String(exprStr)
+        .trim()
+        .replace(/×/g, '*')
+        .replace(/÷/g, '/')
+        .replace(/−/g, '-');
+      if (!/^[\d\s+\-*/().]+$/.test(sanitized)) return null;
+      try {
+        const result = Function('"use strict"; return (' + sanitized + ')')();
+        if (typeof result !== 'number' || !isFinite(result)) return null;
+        return Math.round(result * 10000) / 10000;
+      } catch {
+        return null;
+      }
+    }
+
+    function safeEval(expr) {
+      return evalExpression(expr);
+    }
+
+    function evalWithX(expr, x) {
+      const substituted = expr
+        .replace(/(\d)x/g, '$1*' + x)
+        .replace(/x/g, String(x));
+      return evalExpression(substituted);
+    }
+
+    function extractExpressionsTarget(category) {
+      if (category.targetN != null) return category.targetN;
+      const match = category.title.match(/Expressions equal to (\d+)/);
+      return match ? parseInt(match[1], 10) : null;
+    }
+
+    function validateExpressionsEqualCategory(category) {
+      const n = extractExpressionsTarget(category);
+      if (n == null || category.items.length !== 4) return false;
+      return category.items.every(item => evalExpression(item) === n);
+    }
+
+    function buildExpressionsForTarget(n) {
+      const pool = [];
+      const seen = new Set();
+
+      const tryAdd = (expr) => {
+        const key = expr.replace(/\s+/g, '');
+        if (seen.has(key)) return;
+        if (evalExpression(expr) === n) {
+          seen.add(key);
+          pool.push(expr);
+        }
+      };
+
+      // Addition: a + (n − a)
+      for (let a = 1; a < n; a++) {
+        tryAdd(`${a} + ${n - a}`);
+      }
+
+      // Subtraction: (n + b) − b
+      for (let b = 1; b <= 25; b++) {
+        tryAdd(`${n + b} − ${b}`);
+      }
+
+      // Multiplication: only valid factor pairs (for primes → 1 × n only)
+      for (let a = 1; a <= n; a++) {
+        if (n % a !== 0) continue;
+        const b = n / a;
+        if (a === 1) {
+          tryAdd(`1 × ${n}`);
+        } else if (a <= b) {
+          tryAdd(`${a} × ${b}`);
+          if (a !== b) tryAdd(`${b} × ${a}`);
+        }
+      }
+
+      // Division: (n × d) ÷ d
+      for (let d = 2; d <= 12; d++) {
+        const dividend = n * d;
+        if (dividend <= 200) tryAdd(`${dividend} ÷ ${d}`);
+      }
+
+      return pool;
+    }
+
+    /* ── Generator 1: Prime Numbers ── */
+    function genPrimes() {
+      const pool = [];
+      for (let n = 2; n <= 97; n++) if (isPrime(n)) pool.push(n);
+      const items = pickN(pool, 4).map(String);
+      return { title: 'Prime Numbers', items, difficulty: 'easy' };
+    }
+
+    /* ── Generator 2: Perfect Squares ── */
+    function genPerfectSquares() {
+      const pool = [];
+      for (let n = 2; n <= 12; n++) pool.push(n * n);
+      const items = pickN(pool, 4).map(String);
+      return { title: 'Perfect Squares', items, difficulty: 'easy' };
+    }
+
+    /* ── Generator 3: Multiples of X ── */
+    function genMultiples() {
+      const x = randInt(3, 12);
+      const used = new Set();
+      const items = [];
+      let guard = 0;
+      while (items.length < 4 && guard < 50) {
+        const multiple = x * randInt(2, 12);
+        uniquePush(used, multiple, items);
+        guard++;
+      }
+      return {
+        title: `Multiples of ${x}`,
+        items: items.map(String),
+        difficulty: 'medium',
+      };
+    }
+
+    /* ── Generator 4: Expressions Equal to N ── */
+    function genExpressionsEqualToN() {
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const n = randInt(8, 36);
+        const pool = buildExpressionsForTarget(n);
+        if (pool.length >= 4) {
+          const items = pickN(pool, 4);
+          const category = {
+            title: `Expressions equal to ${n}`,
+            items,
+            difficulty: 'medium',
+            targetN: n,
+          };
+          if (validateExpressionsEqualCategory(category)) return category;
+        }
+      }
+
+      const n = 12;
+      const items = pickN(buildExpressionsForTarget(n), 4);
+      return {
+        title: `Expressions equal to ${n}`,
+        items,
+        difficulty: 'medium',
+        targetN: n,
+      };
+    }
+
+    /* ── Generator 5: Equivalent Fractions ── */
+    function genEquivalentFractions() {
+      const bases = [
+        [1, 2], [1, 3], [2, 3], [3, 4], [1, 4], [2, 5], [3, 5], [3, 8], [5, 8],
+      ];
+      const [num, den] = bases[randInt(0, bases.length - 1)];
+      const value = num / den;
+      const decStr = Number.isInteger(value * 100) ? String(value) : value.toFixed(2);
+      const pool = [
+        `${num * 2}/${den * 2}`,
+        `${num * 3}/${den * 3}`,
+        `${num * 5}/${den * 5}`,
+        `${num * 10}/${den * 10}`,
+        `${Math.round(value * 100)}%`,
+        decStr,
+        `${num * 4}/${den * 4}`,
+        `${num * 6}/${den * 6}`,
+      ];
+      const items = pickN(pool, 4);
+      const label = num === 1 ? `${num}/${den}` : `${num}/${den}`;
+      return {
+        title: `Fractions equal to ${label}`,
+        items,
+        difficulty: 'medium',
+      };
+    }
+
+    /* ── Generator 6: Factors of N ── */
+    function genFactors() {
+      const composites = [12, 18, 20, 24, 28, 30, 36, 40, 42, 48, 54, 60, 72, 80, 90, 100];
+      const n = composites[randInt(0, composites.length - 1)];
+      const factors = [];
+      for (let i = 2; i <= n / 2; i++) {
+        if (n % i === 0) factors.push(i);
+      }
+      if (factors.length < 4) factors.push(n);
+      const items = pickN(factors, 4).map(String);
+      return {
+        title: `Factors of ${n}`,
+        items,
+        difficulty: 'hard',
+      };
+    }
+
+    /* ── Generator 7: Negative Results ── */
+    function genNegativeResults() {
+      const used = new Set();
+      const items = [];
+      const builders = [
+        () => {
+          const a = randInt(1, 9);
+          const b = randInt(a + 1, 20);
+          return `${a} − ${b}`;
+        },
+        () => {
+          const a = randInt(2, 8);
+          const b = randInt(2, 6);
+          return `−${a} × ${b}`;
+        },
+        () => {
+          const a = randInt(10, 30);
+          const b = randInt(2, 6);
+          if (a % b !== 0) return null;
+          return `−${a} ÷ ${b}`;
+        },
+        () => {
+          const val = randInt(3, 15);
+          return `${val} − ${val * 2}`;
+        },
+        () => {
+          const a = randInt(4, 12);
+          return `−${a} − ${randInt(1, 5)}`;
+        },
+      ];
+
+      let guard = 0;
+      while (items.length < 4 && guard < 80) {
+        const expr = builders[randInt(0, builders.length - 1)]();
+        if (expr && evalExpression(expr) < 0) uniquePush(used, expr, items);
+        guard++;
+      }
+      return {
+        title: 'Expressions with negative results',
+        items,
+        difficulty: 'hard',
+      };
+    }
+
+    /* ── Generator 8: Powers of 2 or 3 ── */
+    function genPowers() {
+      const base = Math.random() < 0.5 ? 2 : 3;
+      const maxExp = base === 2 ? 8 : 6;
+      const pool = [];
+      for (let e = 2; e <= maxExp; e++) pool.push(base ** e);
+      const items = pickN(pool, 4).map(String);
+      return {
+        title: `Powers of ${base}`,
+        items,
+        difficulty: 'easy',
+      };
+    }
+
+    /* ── Generator 9: Angles in a Shape ── */
+    function genAngles() {
+      const triangleSets = [
+        '60°-60°-60°', '90°-45°-45°', '100°-40°-40°', '120°-30°-30°',
+        '70°-70°-40°', '50°-60°-70°', '80°-50°-50°', '30°-60°-90°',
+      ];
+      const facts = [
+        'Triangle total: 180°',
+        'Right angle: 90°',
+        'Straight line: 180°',
+        'Full circle: 360°',
+        'Quadrilateral total: 360°',
+        'Acute angle < 90°',
+        'Obtuse angle > 90°',
+        'Complementary sum: 90°',
+      ];
+      const useTriangles = Math.random() < 0.5;
+      const pool = useTriangles ? triangleSets : facts;
+      const items = pickN(pool, 4);
+      return {
+        title: useTriangles ? 'Triangle angle sets' : 'Angle facts & totals',
+        items,
+        difficulty: 'tricky',
+      };
+    }
+
+    /* ── Generator 10: Cube Numbers ── */
+    function genCubeNumbers() {
+      const pool = [];
+      for (let n = 1; n <= 8; n++) pool.push(n ** 3);
+      const items = pickN(pool, 4).map(String);
+      return { title: 'Cube Numbers', items, difficulty: 'hard' };
+    }
+
+    /* ── Generator 11: Structural Properties ── */
+    function genStructuralProperties() {
+      const variants = [
+        () => {
+          const used = new Set();
+          const items = [];
+          let guard = 0;
+          while (items.length < 4 && guard < 40) {
+            const n = randInt(1, 25) * 2;
+            uniquePush(used, n, items);
+            guard++;
+          }
+          return { title: 'Even Numbers', items: items.map(String), difficulty: 'easy' };
+        },
+        () => {
+          const oddSquares = [9, 25, 49, 81, 121, 169];
+          return {
+            title: 'Odd Perfect Squares',
+            items: pickN(oddSquares, 4).map(String),
+            difficulty: 'tricky',
+          };
+        },
+        () => {
+          const used = new Set();
+          const items = [];
+          let guard = 0;
+          while (items.length < 4 && guard < 40) {
+            const n = randInt(1, 12) * 2 + 1;
+            uniquePush(used, n, items);
+            guard++;
+          }
+          return { title: 'Odd Numbers', items: items.map(String), difficulty: 'medium' };
+        },
+        () => {
+          const used = new Set();
+          const items = [];
+          let guard = 0;
+          while (items.length < 4 && guard < 40) {
+            const n = randInt(1, 10) * 5;
+            uniquePush(used, n, items);
+            guard++;
+          }
+          return { title: 'Multiples of 5', items: items.map(String), difficulty: 'medium' };
+        },
+      ];
+      return variants[randInt(0, variants.length - 1)]();
+    }
+
+    /* ── Generator 12: Algebraic Evaluation ── */
+    function genAlgebraicEvaluation() {
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const x = randInt(2, 6);
+        const target = randInt(10, 24);
+        const exprPool = [];
+
+        const addC = target - x;
+        if (addC > 0) exprPool.push(`x + ${addC}`);
+        if (target % x === 0) {
+          const coeff = target / x;
+          exprPool.push(coeff === 1 ? 'x' : `${coeff}x`);
+          exprPool.push(`x × ${coeff}`);
+        }
+        exprPool.push(`${target + x} − x`);
+        for (const a of [2, 3, 4, 5]) {
+          const c = target - a * x;
+          if (c > 0) exprPool.push(`${a}x + ${c}`);
+          else if (c === 0) exprPool.push(`${a}x`);
+          else exprPool.push(`${a}x − ${Math.abs(c)}`);
+        }
+        const alt = target * 2 - x;
+        if (alt > 0) exprPool.push(`${alt} − x`);
+
+        const valid = [...new Set(exprPool)].filter(e => evalWithX(e, x) === target);
+        if (valid.length >= 4) {
+          return {
+            title: `Expressions equal to ${target} (x = ${x})`,
+            items: pickN(valid, 4),
+            difficulty: 'tricky',
+          };
+        }
+      }
+      return {
+        title: 'Expressions equal to 12 (x = 3)',
+        items: ['x + 9', '4x', 'x × 4', '15 − x'],
+        difficulty: 'tricky',
+      };
+    }
+
+    const CATEGORY_GENERATORS = [
+      { id: 'primes', fn: genPrimes },
+      { id: 'squares', fn: genPerfectSquares },
+      { id: 'multiples', fn: genMultiples },
+      { id: 'exprN', fn: genExpressionsEqualToN },
+      { id: 'fractions', fn: genEquivalentFractions },
+      { id: 'factors', fn: genFactors },
+      { id: 'negative', fn: genNegativeResults },
+      { id: 'powers', fn: genPowers },
+      { id: 'angles', fn: genAngles },
+      { id: 'cubes', fn: genCubeNumbers },
+      { id: 'structural', fn: genStructuralProperties },
+      { id: 'algebra', fn: genAlgebraicEvaluation },
+    ];
+
+    function assignCategoryId(category, generatorId) {
+      return {
+        ...category,
+        id: `${generatorId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      };
+    }
+
+    function generateCategory(generator) {
+      let category = null;
+      let attempts = 0;
+      while (attempts < 40) {
+        category = generator.fn();
+        const hasFourItems = category.items.length === 4;
+        const noInternalDupes = !categoryHasInternalDuplicates(category);
+        const exprValid = generator.id !== 'exprN' || validateExpressionsEqualCategory(category);
+        if (hasFourItems && noInternalDupes && exprValid) break;
+        attempts++;
+      }
+      if (generator.id === 'exprN' && !validateExpressionsEqualCategory(category)) {
+        category = genExpressionsEqualToN();
+      }
+      return assignCategoryId(category, generator.id);
+    }
+
+    function buildConnectionPuzzle(categories) {
+      const tiles = categories.flatMap(cat =>
+        cat.items.map((text, i) => ({
+          id: `${cat.id}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+          text,
+          categoryId: cat.id,
+        }))
+      );
+      return { categories, tiles: shuffle(tiles) };
+    }
+
+    function createConnectionsGame() {
+      for (let puzzleAttempt = 0; puzzleAttempt < 50; puzzleAttempt++) {
+        const selectedGenerators = shuffle(CATEGORY_GENERATORS).slice(0, 4);
+        const categories = [];
+
+        for (const generator of selectedGenerators) {
+          let category = generateCategory(generator);
+          let regenAttempts = 0;
+          while (
+            regenAttempts < 30 &&
+            (categoryOverlapsOthers(category, categories) ||
+              categoryHasInternalDuplicates(category) ||
+              (generator.id === 'exprN' && !validateExpressionsEqualCategory(category)))
+          ) {
+            category = generateCategory(generator);
+            regenAttempts++;
+          }
+          categories.push(category);
+        }
+
+        const sig = puzzleSignature(categories);
+        if (!CONNECTIONS_PUZZLE_HISTORY.has(sig)) {
+          rememberPuzzleSignature(sig);
+          const { tiles } = buildConnectionPuzzle(categories);
+          return { activeCategories: categories, tiles };
+        }
+      }
+
+      const fallback = shuffle(CATEGORY_GENERATORS).slice(0, 4).map(g => generateCategory(g));
+      const { tiles } = buildConnectionPuzzle(fallback);
+      return { activeCategories: fallback, tiles };
+    }
+
+    /* ─────────────────────────────────────────────
+       TARGET NUMBER HELPERS
+    ───────────────────────────────────────────── */
+    function pickSourceNumber() {
+      if (Math.random() < 0.18) {
+        return [20, 25, 50][Math.floor(Math.random() * 3)];
+      }
+      return Math.floor(Math.random() * 12) + 1;
+    }
+
+    function generateTargetPuzzle() {
+      const templates = [
+        (a, b, c, d, e) => {
+          const target = (a + b) * c - d + e;
+          return { target, expr: `(${a} + ${b}) × ${c} − ${d} + ${e}` };
+        },
+        (a, b, c, d, e) => {
+          const target = a * b + c * d - e;
+          return { target, expr: `${a} × ${b} + ${c} × ${d} − ${e}` };
+        },
+        (a, b, c, d, e) => {
+          const target = (a + b + c) * d - e;
+          return { target, expr: `(${a} + ${b} + ${c}) × ${d} − ${e}` };
+        },
+        (a, b, c, d, e) => {
+          const target = a + b + c + d + e;
+          return { target, expr: `${a} + ${b} + ${c} + ${d} + ${e}` };
+        },
+        (a, b, c, d, e) => {
+          const target = a * b - c + d + e;
+          return { target, expr: `${a} × ${b} − ${c} + ${d} + ${e}` };
+        },
+        (a, b, c, d, e) => {
+          if (d === 0 || (a * c - b) % d !== 0) return null;
+          const target = (a * c - b) / d + e;
+          return { target, expr: `(${a} × ${c} − ${b}) ÷ ${d} + ${e}` };
+        },
+        (a, b, c, d, e) => {
+          const target = a * b + c - d - e;
+          return { target, expr: `${a} × ${b} + ${c} − ${d} − ${e}` };
+        },
+        (a, b, c, d, e) => {
+          const target = (a + b) * (c + d) - e;
+          return { target, expr: `(${a} + ${b}) × (${c} + ${d}) − ${e}` };
+        },
+      ];
+
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const nums = Array.from({ length: 5 }, pickSourceNumber);
+        const template = templates[Math.floor(Math.random() * templates.length)];
+        const result = template(...nums);
+        if (
+          result &&
+          Number.isInteger(result.target) &&
+          result.target >= 10 &&
+          result.target <= 300
+        ) {
+          return { numbers: shuffle(nums), target: result.target, solution: result.expr };
+        }
+      }
+
+      const fallback = [3, 5, 8, 10, 2];
+      return {
+        numbers: shuffle(fallback),
+        target: (fallback[0] + fallback[1]) * fallback[2] - fallback[3] + fallback[4],
+        solution: `(3 + 5) × 8 − 10 + 2`,
+      };
+    }
+
+    const TARGET_BINARY_OPS = ['+', '−', '×', '÷'];
+
+    /* ─────────────────────────────────────────────
+       EQUATION SOLVER (NERDLE) HELPERS
+    ───────────────────────────────────────────── */
+    function generateEquationPuzzle() {
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const a = randInt(2, 18);
+        const b = randInt(2, 12);
+        const ops = [
+          { sym: '+', val: a + b },
+          { sym: '−', val: a - b },
+          { sym: '×', val: a * b },
+        ];
+        const chosen = ops[randInt(0, ops.length - 1)];
+        if (chosen.val > 0 && chosen.val <= 99) {
+          return `${a}${chosen.sym}${b}=${chosen.val}`;
+        }
+      }
+      return '8+4=12';
+    }
+
+    function evaluateEquationGuess(secret, guess) {
+      const feedback = new Array(secret.length).fill('absent');
+      const secretUsed = new Array(secret.length).fill(false);
+      const guessArr = guess.split('');
+      const secretArr = secret.split('');
+
+      for (let i = 0; i < secretArr.length; i++) {
+        if (guessArr[i] === secretArr[i]) {
+          feedback[i] = 'correct';
+          secretUsed[i] = true;
+        }
+      }
+      for (let i = 0; i < guessArr.length; i++) {
+        if (feedback[i] === 'correct') continue;
+        const idx = secretArr.findIndex((ch, j) => !secretUsed[j] && ch === guessArr[i]);
+        if (idx >= 0) {
+          feedback[i] = 'present';
+          secretUsed[idx] = true;
+        }
+      }
+      return feedback;
+    }
+
+    function buildEquationRows(secret, guesses) {
+      const rows = [];
+      for (let i = 0; i < 6; i++) {
+        const guess = guesses[i] || '';
+        const feedback = guess ? evaluateEquationGuess(secret, guess) : [];
+        const cells = Array.from({ length: secret.length }, (_, j) => ({
+          char: guess[j] || '',
+          state: guess ? feedback[j] : '',
+        }));
+        rows.push({ cells });
+      }
+      return rows;
+    }
+
+    /* ─────────────────────────────────────────────
+       TWO TRUTHS AND A LIE GENERATOR
+    ───────────────────────────────────────────── */
+    function buildMathFactPool() {
+      const pool = [];
+      const primes = [7, 11, 13, 17, 19, 23, 29, 31];
+      const composites = [15, 21, 25, 27, 33, 35, 39, 45];
+
+      for (const p of primes) {
+        pool.push({ text: `${p} is a prime number`, isTrue: true, explain: `${p} is only divisible by 1 and itself — it is prime.` });
+        pool.push({ text: `${p} is a composite number`, isTrue: false, explain: `${p} is prime, not composite. It has exactly two factors: 1 and ${p}.` });
+      }
+      for (const c of composites) {
+        pool.push({ text: `${c} is a composite number`, isTrue: true, explain: `${c} has more than two factors, so it is composite.` });
+        pool.push({ text: `${c} is a prime number`, isTrue: false, explain: `${c} is not prime — it has factors other than 1 and itself.` });
+      }
+      for (let n = 4; n <= 12; n++) {
+        const sq = n * n;
+        pool.push({ text: `${sq} is a perfect square`, isTrue: true, explain: `${sq} = ${n}², so it is a perfect square.` });
+        pool.push({ text: `${sq + 1} is a perfect square`, isTrue: false, explain: `${sq + 1} is not a perfect square. ${sq} = ${n}², but ${n + 1}² = ${(n + 1) * (n + 1)}.` });
+      }
+      pool.push(
+        { text: 'The interior angles of a triangle add up to 180°', isTrue: true, explain: 'Every triangle in plane geometry has interior angles summing to 180°.' },
+        { text: 'The interior angles of a triangle add up to 360°', isTrue: false, explain: 'Triangles sum to 180°. Quadrilaterals sum to 360°.' },
+        { text: 'A square has 4 equal sides and 4 right angles', isTrue: true, explain: 'By definition, a square has four congruent sides and four 90° angles.' },
+        { text: 'A rectangle always has 4 equal sides', isTrue: false, explain: 'Rectangles have 4 right angles but sides are not always equal — only squares do.' },
+        { text: '1/2 is equal to 50%', isTrue: true, explain: 'One half = 0.5 = 50%.' },
+        { text: '1/3 is equal to 50%', isTrue: false, explain: '1/3 ≈ 33.3%, not 50%.' },
+        { text: '3 + 4 × 2 = 11', isTrue: true, explain: 'Order of operations: multiply first (4×2=8), then add (3+8=11).' },
+        { text: '3 + 4 × 2 = 14', isTrue: false, explain: 'You must multiply before adding: 3 + 8 = 11, not 14.' },
+        { text: '2³ equals 8', isTrue: true, explain: '2³ = 2 × 2 × 2 = 8.' },
+        { text: '2³ equals 6', isTrue: false, explain: '2³ = 8, not 6. (2 × 3 = 6, but that is not cubing.)' },
+        { text: 'If x = 5, then 2x + 3 = 13', isTrue: true, explain: '2(5) + 3 = 10 + 3 = 13.' },
+        { text: 'If x = 5, then 2x + 3 = 15', isTrue: false, explain: '2(5) + 3 = 13, not 15.' },
+        { text: '0.75 is equivalent to 3/4', isTrue: true, explain: '3 ÷ 4 = 0.75.' },
+        { text: '0.75 is equivalent to 2/3', isTrue: false, explain: '2/3 ≈ 0.667, not 0.75.' }
+      );
+      return pool;
+    }
+
+    function generateTruthsLieRound() {
+      const pool = buildMathFactPool();
+      const truths = pool.filter(f => f.isTrue);
+      const lies = pool.filter(f => !f.isTrue);
+      let t1, t2, lie;
+      let guard = 0;
+      do {
+        t1 = truths[randInt(0, truths.length - 1)];
+        t2 = truths[randInt(0, truths.length - 1)];
+        lie = lies[randInt(0, lies.length - 1)];
+        guard++;
+      } while ((t1.text === t2.text || t1.text === lie.text || t2.text === lie.text) && guard < 50);
+
+      const shuffled = shuffle([t1, t2, lie]);
+      const statements = shuffled.map((f, i) => ({
+        letter: String.fromCharCode(65 + i),
+        text: f.text,
+        isLie: !f.isTrue,
+      }));
+      const lieStmt = statements.find(s => s.isLie);
+      return {
+        statements,
+        lieLetter: lieStmt.letter,
+        lieText: lieStmt.text,
+        explanation: shuffled.find(f => !f.isTrue).explain,
+      };
+    }
+
+    /* ─────────────────────────────────────────────
+       FUNCTION MACHINE GENERATOR
+    ───────────────────────────────────────────── */
+    function generateFunctionMachine() {
+      const a = randInt(2, 6);
+      const b = randInt(1, 12);
+      const subtract = Math.random() < 0.5;
+      const ruleText = subtract
+        ? `Multiply by ${a}, then subtract ${b}`
+        : `Multiply by ${a}, then add ${b}`;
+      const apply = (x) => (subtract ? x * a - b : x * a + b);
+      const inputPool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15];
+      const inputs = pickN(inputPool, 3);
+      const table = inputs.map(input => ({ input, output: apply(input) }));
+      const wrongRules = shuffle([
+        `Multiply by ${a + 1}, then add ${b}`,
+        `Add ${b}, then multiply by ${a}`,
+        `Multiply by ${a}`,
+        `Square the input, then add ${b}`,
+        `Multiply by ${a - 1}, then add ${b}`,
+        `Subtract ${b}, then multiply by ${a}`,
+      ].filter(r => r !== ruleText)).slice(0, 3);
+      const choices = shuffle([ruleText, ...wrongRules]);
+      return { ruleText, table, choices, multiplier: a, offset: b, subtract };
+    }
+
+    /* ─────────────────────────────────────────────
+       MYSTERY NUMBER GENERATOR
+    ───────────────────────────────────────────── */
+    function digitSum(n) {
+      return Math.floor(n / 10) + (n % 10);
+    }
+
+    function generateMysteryNumber() {
+      for (let attempt = 0; attempt < 80; attempt++) {
+        const secret = randInt(10, 99);
+        const mult = [3, 4, 5, 6, 7, 8, 9].filter(m => secret % m === 0);
+        if (!mult.length) continue;
+        const divisor = mult[randInt(0, mult.length - 1)];
+        const ds = digitSum(secret);
+        const isEven = secret % 2 === 0;
+        const lessThan = secret < 50 ? 50 : 100;
+        const clues = [
+          `I am a 2-digit number less than ${lessThan}`,
+          `I am a multiple of ${divisor}`,
+          `My digits add up to ${ds}`,
+          isEven ? 'I am an even number' : 'I am an odd number',
+        ];
+        const matches = [];
+        for (let n = 10; n < lessThan; n++) {
+          if (n % divisor === 0 && digitSum(n) === ds && (n % 2 === 0) === isEven) matches.push(n);
+        }
+        if (matches.length === 1 && matches[0] === secret) {
+          return { secret, clues };
+        }
+      }
+      return {
+        secret: 36,
+        clues: [
+          'I am a 2-digit number less than 50',
+          'I am a multiple of 6',
+          'My digits add up to 9',
+          'I am an even number',
+        ],
+      };
+    }
+
+    /* ─────────────────────────────────────────────
+       ALPINE APP
+    ───────────────────────────────────────────── */
+    function mathStartersHub() {
+      return {
+        currentView: 'home',
+        isFullscreen: false,
+        initialized: {
+          connections: false, target: false, equation: false,
+          truths: false, function: false, mystery: false,
+        },
+
+        activities: [
+          { id: 'connections', label: 'Math Connections', shortLabel: 'Connections' },
+          { id: 'target', label: 'Target Number / 24-Game', shortLabel: 'Target' },
+          { id: 'equation', label: 'Nerdle / Equation Solver', shortLabel: 'Nerdle' },
+          { id: 'truths', label: 'Two Truths and a Lie', shortLabel: 'Truths' },
+          { id: 'function', label: 'Function Machine', shortLabel: 'Function' },
+          { id: 'mystery', label: 'Mystery Number', shortLabel: 'Mystery' },
+        ],
+
+        hubCards: [
+          {
+            id: 'connections',
+            title: 'Math Connections',
+            description: 'Group 16 tiles into 4 math categories.',
+            badge: 'Interactive Grouping Puzzle',
+            badgeClass: 'bg-violet-600 text-white',
+            icon: 'grid-3x3',
+            color: 'bg-violet-600',
+          },
+          {
+            id: 'target',
+            title: 'Target Number / 24-Game',
+            description: 'Use 5 numbers and basic operations to hit the target.',
+            badge: 'Arithmetic Builder',
+            badgeClass: 'bg-orange-600 text-white',
+            icon: 'target',
+            color: 'bg-orange-600',
+          },
+          {
+            id: 'equation',
+            title: 'Nerdle / Equation Solver',
+            description: 'Guess the hidden mathematical equation in 6 tries.',
+            badge: 'Logic Grid',
+            badgeClass: 'bg-emerald-600 text-white',
+            icon: 'calculator',
+            color: 'bg-emerald-600',
+          },
+          {
+            id: 'truths',
+            title: 'Two Truths and a Lie',
+            description: 'Find the false statement among three math facts.',
+            badge: 'Error Analysis',
+            badgeClass: 'bg-red-600 text-white',
+            icon: 'badge-alert',
+            color: 'bg-red-600',
+          },
+          {
+            id: 'function',
+            title: 'Function Machine',
+            description: 'Discover the hidden input-output rule from the table.',
+            badge: 'Algebra & Patterns',
+            badgeClass: 'bg-sky-600 text-white',
+            icon: 'cog',
+            color: 'bg-sky-600',
+          },
+          {
+            id: 'mystery',
+            title: 'Mystery Number',
+            description: 'Deduce the secret number from clue-by-clue hints.',
+            badge: 'Deductive Reasoning',
+            badgeClass: 'bg-amber-600 text-white',
+            icon: 'search',
+            color: 'bg-amber-600',
+          },
+        ],
+
+        goHome() {
+          this.currentView = 'home';
+          this.refreshIcons();
+        },
+
+        ensureActivityInitialized(id) {
+          if (id === 'connections' && !this.initialized.connections) {
+            this.connectionsNewGame();
+            this.initialized.connections = true;
+          }
+          if (id === 'target' && !this.initialized.target) {
+            this.targetInit();
+            this.initialized.target = true;
+          }
+          if (id === 'equation' && !this.initialized.equation) {
+            this.equationNewGame();
+            this.initialized.equation = true;
+          }
+          if (id === 'truths' && !this.initialized.truths) {
+            this.truthsNewRound();
+            this.initialized.truths = true;
+          }
+          if (id === 'function' && !this.initialized.function) {
+            this.functionMachineNew();
+            this.initialized.function = true;
+          }
+          if (id === 'mystery' && !this.initialized.mystery) {
+            this.mysteryNewGame();
+            this.initialized.mystery = true;
+          }
+        },
+
+        launchActivity(id) {
+          this.ensureActivityInitialized(id);
+          this.currentView = id;
+          this.refreshIcons();
+        },
+
+        switchActivity(id) {
+          if (id === 'home') {
+            this.goHome();
+            return;
+          }
+          this.ensureActivityInitialized(id);
+          this.currentView = id;
+          this.refreshIcons();
+        },
+
+        /* Timer */
+        timer: { secondsLeft: 300, running: false, interval: null },
+        get timerDisplay() {
+          const m = Math.floor(this.timer.secondsLeft / 60);
+          const s = this.timer.secondsLeft % 60;
+          return `${m}:${s.toString().padStart(2, '0')}`;
+        },
+        timerStart() {
+          if (this.timer.running || this.timer.secondsLeft === 0) return;
+          this.timer.running = true;
+          this.timer.interval = setInterval(() => {
+            if (this.timer.secondsLeft <= 1) {
+              this.timer.secondsLeft = 0;
+              this.timerPause();
+            } else {
+              this.timer.secondsLeft--;
+            }
+          }, 1000);
+        },
+        timerPause() {
+          this.timer.running = false;
+          clearInterval(this.timer.interval);
+        },
+        timerReset() {
+          this.timerPause();
+          this.timer.secondsLeft = 300;
+        },
+
+        /* Fullscreen */
+        toggleFullscreen() {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+          } else {
+            document.exitFullscreen();
+          }
+        },
+
+        /* Math Connections */
+        connections: {
+          activeCategories: [],
+          tiles: [],
+          selected: [],
+          solved: [],
+          lives: 4,
+          feedback: '',
+          shaking: false,
+        },
+        get connectionsSolvedCategories() {
+          return this.connections.solved.map(id =>
+            this.connections.activeCategories.find(c => c.id === id)
+          ).filter(Boolean);
+        },
+        get connectionsRemainingTiles() {
+          return this.connections.tiles.filter(t => !this.connections.solved.includes(t.categoryId));
+        },
+        categoryBannerClass(diff) { return BANNER_CLASSES[diff] || ''; },
+
+        connectionsToggleTile(id) {
+          if (this.connections.solved.length === 4 || this.connections.lives === 0) return;
+          const idx = this.connections.selected.indexOf(id);
+          if (idx >= 0) {
+            this.connections.selected.splice(idx, 1);
+          } else if (this.connections.selected.length < 4) {
+            this.connections.selected.push(id);
+          }
+          this.connections.feedback = '';
+        },
+        connectionsDeselectAll() {
+          this.connections.selected = [];
+          this.connections.feedback = '';
+        },
+        connectionsSubmit() {
+          if (this.connections.selected.length !== 4 || this.connections.solved.length === 4 || this.connections.lives === 0) return;
+          const selected = this.connections.tiles.filter(t => this.connections.selected.includes(t.id));
+          const cats = new Set(selected.map(t => t.categoryId));
+          if (cats.size === 1) {
+            const catId = selected[0].categoryId;
+            if (!this.connections.solved.includes(catId)) {
+              this.connections.solved.push(catId);
+              this.connections.selected = [];
+              this.connections.feedback = '';
+              return;
+            }
+          }
+          this.connections.lives--;
+          this.connections.feedback = 'Not a match — try again!';
+          this.connections.shaking = true;
+          setTimeout(() => {
+            this.connections.shaking = false;
+            this.connections.selected = [];
+          }, 600);
+        },
+        connectionsNewGame() {
+          const game = createConnectionsGame();
+          this.connections.activeCategories = game.activeCategories;
+          this.connections.tiles = game.tiles;
+          this.connections.selected = [];
+          this.connections.solved = [];
+          this.connections.lives = 4;
+          this.connections.feedback = '';
+          this.connections.shaking = false;
+          this.refreshIcons();
+        },
+
+        /* Target Number */
+        target: {
+          numbers: [],
+          target: 0,
+          tokens: [],
+          usedNumbers: [],
+          expression: '',
+          result: null,
+          won: false,
+          solution: '',
+        },
+
+        targetInit() {
+          const puzzle = generateTargetPuzzle();
+          this.target.numbers = puzzle.numbers;
+          this.target.target = puzzle.target;
+          this.target.solution = puzzle.solution;
+          this.targetClear();
+        },
+
+        targetRebuildExpression() {
+          this.target.expression = this.target.tokens.map(t => t.value).join(' ');
+          this.target.result = this.target.expression ? evalExpression(this.target.expression) : null;
+          if (this.target.result === this.target.target && this.target.usedNumbers.length === 5) {
+            this.target.won = true;
+          }
+        },
+
+        targetLastToken() {
+          const tokens = this.target.tokens;
+          return tokens.length ? tokens[tokens.length - 1] : null;
+        },
+
+        targetParenDepth() {
+          let depth = 0;
+          for (const t of this.target.tokens) {
+            if (t.value === '(') depth++;
+            if (t.value === ')') depth--;
+          }
+          return depth;
+        },
+
+        targetCanAddNumber() {
+          const last = this.targetLastToken();
+          if (!last) return true;
+          if (last.type === 'num') return false;
+          if (last.value === ')') return false;
+          return true;
+        },
+
+        targetCanAddBinaryOperator() {
+          const last = this.targetLastToken();
+          if (!last) return false;
+          if (last.type === 'num') return true;
+          if (last.value === ')') return true;
+          return false;
+        },
+
+        targetCanAddOpenParen() {
+          const last = this.targetLastToken();
+          if (!last) return true;
+          if (last.value === '(') return true;
+          if (last.type === 'op' && TARGET_BINARY_OPS.includes(last.value)) return true;
+          return false;
+        },
+
+        targetCanAddCloseParen() {
+          const last = this.targetLastToken();
+          if (!last) return false;
+          if (this.targetParenDepth() <= 0) return false;
+          if (last.type === 'num') return true;
+          if (last.value === ')') return true;
+          return false;
+        },
+
+        targetCanAddOperator(op) {
+          if (this.target.won) return false;
+          if (op === '(') return this.targetCanAddOpenParen();
+          if (op === ')') return this.targetCanAddCloseParen();
+          if (TARGET_BINARY_OPS.includes(op)) return this.targetCanAddBinaryOperator();
+          return false;
+        },
+
+        targetAddNumber(idx) {
+          if (this.target.won) return;
+          if (this.target.usedNumbers.includes(idx)) return;
+          if (!this.targetCanAddNumber()) return;
+          this.target.tokens.push({ type: 'num', value: String(this.target.numbers[idx]), numIdx: idx });
+          this.target.usedNumbers.push(idx);
+          this.targetRebuildExpression();
+        },
+
+        targetAddOperator(op) {
+          if (!this.targetCanAddOperator(op)) return;
+          this.target.tokens.push({ type: 'op', value: op });
+          this.targetRebuildExpression();
+        },
+
+        targetBackspace() {
+          if (this.target.won || !this.target.tokens.length) return;
+          const removed = this.target.tokens.pop();
+          if (removed.type === 'num') {
+            const i = this.target.usedNumbers.indexOf(removed.numIdx);
+            if (i >= 0) this.target.usedNumbers.splice(i, 1);
+          }
+          this.target.won = false;
+          this.targetRebuildExpression();
+        },
+
+        targetClear() {
+          this.target.tokens = [];
+          this.target.usedNumbers = [];
+          this.target.expression = '';
+          this.target.result = null;
+          this.target.won = false;
+        },
+
+        targetGenerate() {
+          const puzzle = generateTargetPuzzle();
+          this.target.numbers = puzzle.numbers;
+          this.target.target = puzzle.target;
+          this.target.solution = puzzle.solution;
+          this.targetClear();
+          this.refreshIcons();
+        },
+
+        /* Equation Solver */
+        equation: {
+          secret: '',
+          guesses: [],
+          currentGuess: '',
+          won: false,
+          lost: false,
+          digits: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+          ops: ['+', '−', '×'],
+          rows: [],
+        },
+
+        equationRefreshRows() {
+          this.equation.rows = buildEquationRows(this.equation.secret, this.equation.guesses);
+        },
+
+        equationNewGame() {
+          this.equation.secret = generateEquationPuzzle();
+          this.equation.guesses = [];
+          this.equation.currentGuess = '';
+          this.equation.won = false;
+          this.equation.lost = false;
+          this.equationRefreshRows();
+          this.refreshIcons();
+        },
+
+        equationAddChar(ch) {
+          if (this.equation.won || this.equation.lost) return;
+          if (this.equation.currentGuess.length >= this.equation.secret.length) return;
+          this.equation.currentGuess += ch;
+        },
+
+        equationBackspace() {
+          if (this.equation.won || this.equation.lost) return;
+          this.equation.currentGuess = this.equation.currentGuess.slice(0, -1);
+        },
+
+        equationSubmitGuess() {
+          if (this.equation.won || this.equation.lost) return;
+          if (this.equation.currentGuess.length !== this.equation.secret.length) return;
+          if (this.equation.guesses.length >= 6) return;
+
+          const guess = this.equation.currentGuess;
+          this.equation.guesses.push(guess);
+          this.equation.currentGuess = '';
+
+          if (guess === this.equation.secret) {
+            this.equation.won = true;
+          } else if (this.equation.guesses.length >= 6) {
+            this.equation.lost = true;
+          }
+          this.equationRefreshRows();
+        },
+
+        /* Two Truths and a Lie */
+        truths: {
+          statements: [],
+          lieLetter: '',
+          lieText: '',
+          explanation: '',
+          selected: null,
+          solved: false,
+          wrongPick: false,
+        },
+
+        truthsNewRound() {
+          const round = generateTruthsLieRound();
+          this.truths.statements = round.statements;
+          this.truths.lieLetter = round.lieLetter;
+          this.truths.lieText = round.lieText;
+          this.truths.explanation = round.explanation;
+          this.truths.selected = null;
+          this.truths.solved = false;
+          this.truths.wrongPick = false;
+          this.refreshIcons();
+        },
+
+        truthsPick(letter) {
+          if (this.truths.solved) return;
+          this.truths.selected = letter;
+          if (letter === this.truths.lieLetter) {
+            this.truths.solved = true;
+            this.truths.wrongPick = false;
+          } else {
+            this.truths.wrongPick = true;
+            setTimeout(() => {
+              if (!this.truths.solved) {
+                this.truths.wrongPick = false;
+                this.truths.selected = null;
+              }
+            }, 1800);
+          }
+        },
+
+        /* Function Machine */
+        functionMachine: {
+          ruleText: '',
+          table: [],
+          choices: [],
+          multiplier: 2,
+          offset: 1,
+          subtract: false,
+          testInput: '',
+          showRule: false,
+          selectedGuess: null,
+          guessResult: null,
+        },
+
+        functionMachineApply(x) {
+          const fm = this.functionMachine;
+          return fm.subtract ? x * fm.multiplier - fm.offset : x * fm.multiplier + fm.offset;
+        },
+
+        functionMachineTestOutput() {
+          const inp = this.functionMachine.testInput;
+          if (inp === '' || inp == null || isNaN(inp)) return '—';
+          return this.functionMachineApply(Number(inp));
+        },
+
+        functionMachineNew() {
+          const data = generateFunctionMachine();
+          this.functionMachine.ruleText = data.ruleText;
+          this.functionMachine.table = data.table;
+          this.functionMachine.choices = data.choices;
+          this.functionMachine.multiplier = data.multiplier;
+          this.functionMachine.offset = data.offset;
+          this.functionMachine.subtract = data.subtract;
+          this.functionMachine.testInput = '';
+          this.functionMachine.showRule = false;
+          this.functionMachine.selectedGuess = null;
+          this.functionMachine.guessResult = null;
+          this.refreshIcons();
+        },
+
+        functionMachineGuess(idx) {
+          if (this.functionMachine.guessResult === 'correct') return;
+          this.functionMachine.selectedGuess = idx;
+          if (this.functionMachine.choices[idx] === this.functionMachine.ruleText) {
+            this.functionMachine.guessResult = 'correct';
+          } else {
+            this.functionMachine.guessResult = 'wrong';
+            setTimeout(() => {
+              if (this.functionMachine.guessResult !== 'correct') {
+                this.functionMachine.guessResult = null;
+                this.functionMachine.selectedGuess = null;
+              }
+            }, 1500);
+          }
+        },
+
+        /* Mystery Number */
+        mystery: {
+          secret: 0,
+          clues: [],
+          cluesRevealed: 0,
+          crossedOff: [],
+          revealed: false,
+          gridNumbers: Array.from({ length: 100 }, (_, i) => i + 1),
+        },
+
+        mysteryNewGame() {
+          const data = generateMysteryNumber();
+          this.mystery.secret = data.secret;
+          this.mystery.clues = data.clues;
+          this.mystery.cluesRevealed = 1;
+          this.mystery.crossedOff = [];
+          this.mystery.revealed = false;
+          this.refreshIcons();
+        },
+
+        mysteryRevealNextClue() {
+          if (this.mystery.cluesRevealed < this.mystery.clues.length) {
+            this.mystery.cluesRevealed++;
+          }
+        },
+
+        mysteryToggleCross(n) {
+          const idx = this.mystery.crossedOff.indexOf(n);
+          if (idx >= 0) this.mystery.crossedOff.splice(idx, 1);
+          else this.mystery.crossedOff.push(n);
+        },
+
+        refreshIcons() {
+          this.$nextTick(() => lucide.createIcons());
+        },
+
+        init() {
+          document.addEventListener('fullscreenchange', () => {
+            this.isFullscreen = !!document.fullscreenElement;
+            this.refreshIcons();
+          });
+          this.$watch('currentView', () => this.refreshIcons());
+          this.refreshIcons();
+        },
+      };
+    }
+  </script>
+</body>
+</html>
